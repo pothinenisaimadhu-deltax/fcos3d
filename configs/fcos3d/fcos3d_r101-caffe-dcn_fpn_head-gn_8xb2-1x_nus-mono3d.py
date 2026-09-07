@@ -26,7 +26,8 @@ train_pipeline = [
         with_bbox_3d=True,
         with_label_3d=True,
         with_bbox_depth=True),
-    dict(type='mmdet.Resize', scale=(1600, 900), keep_ratio=True),
+    # Resize3D keeps image pixels, centers_2d, and cam2img in one frame.
+    dict(type='Resize3D', scale=(1600, 900), keep_ratio=True),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(
         type='Pack3DDetInputs',
@@ -37,7 +38,8 @@ train_pipeline = [
 ]
 test_pipeline = [
     dict(type='LoadImageFromFileMono3D', backend_args=backend_args),
-    dict(type='mmdet.Resize', scale_factor=1.0),
+    # Keep inference calibration consistent with the resized image.
+    dict(type='Resize3D', scale_factor=1.0),
     dict(type='Pack3DDetInputs', keys=['img'])
 ]
 

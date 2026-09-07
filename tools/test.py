@@ -10,6 +10,20 @@ from mmengine.runner import Runner
 from mmdet3d.utils import replace_ceph_backend
 
 
+def validate_fcos3d_nuscenes_config(cfg):
+    """Restrict this testing entry point to the active FCOS3D workflow."""
+    if cfg.model.type != 'FCOSMono3D':
+        raise ValueError(
+            'This project workflow is restricted to FCOSMono3D; got '
+            f"{cfg.model.type!r}.")
+    for split in ('val_dataloader', 'test_dataloader'):
+        dataset = cfg.get(split, {}).get('dataset', {})
+        if dataset.get('type') != 'NuScenesDataset':
+            raise ValueError(
+                f'This workflow requires NuScenesDataset in {split}; got '
+                f"{dataset.get('type')!r}.")
+
+
 # TODO: support fuse_conv_bn and format_only
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -101,6 +115,7 @@ def main():
 
     # load config
     cfg = Config.fromfile(args.config)
+    validate_fcos3d_nuscenes_config(cfg)
 
     # TODO: We will unify the ceph support approach with other OpenMMLab repos
     if args.ceph:

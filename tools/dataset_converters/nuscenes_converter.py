@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import json
 from collections import OrderedDict
 from os import path as osp
 from typing import List, Tuple, Union
@@ -25,10 +26,66 @@ nus_attributes = ('cycle.with_rider', 'cycle.without_rider',
                   'vehicle.parked', 'vehicle.stopped', 'None')
 
 
+def _validate_nuscenes_metadata(meta_root, version):
+    """Validate NuScenes table tokens before constructing ``NuScenes``.
+
+    The NuScenes SDK builds reverse indices during construction and otherwise
+    reports only ``KeyError: 'token'``.  This check is read-only: it does not
+    repair, rewrite, or replace any metadata.
+    """
+    version_root = osp.join(meta_root, version)
+    if not osp.isdir(version_root):
+        raise FileNotFoundError(
+            'NuScenes metadata directory does not exist: {}'.format(
+                version_root))
+
+    errors = []
+    for filename in sorted(os.listdir(version_root)):
+        if not filename.endswith('.json'):
+            continue
+        filepath = osp.join(version_root, filename)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                records = json.load(f)
+        except (OSError, ValueError) as exc:
+            errors.append('{}: invalid JSON ({})'.format(filename, exc))
+            continue
+        if not isinstance(records, list):
+            continue
+
+        seen = {}
+        for index, record in enumerate(records):
+            if not isinstance(record, dict):
+                errors.append('{}[{}]: record is not an object'.format(
+                    filename, index))
+                continue
+            token = record.get('token')
+            if not isinstance(token, str) or not token:
+                errors.append('{}[{}]: missing or invalid token'.format(
+                    filename, index))
+            elif token in seen:
+                errors.append(
+                    '{}[{}]: duplicate token {!r}; first occurrence is '
+                    'index {}'.format(filename, index, token, seen[token]))
+            else:
+                seen[token] = index
+
+    if errors:
+        details = '\n'.join('  - ' + error for error in errors[:20])
+        more = '' if len(errors) <= 20 else '\n  - ... ({} more)'.format(
+            len(errors) - 20)
+        raise ValueError(
+            'Invalid NuScenes metadata in {}. Every table record must have '
+            'a unique string token. No data was modified.\n{}{}'.format(
+                version_root, details, more))
+
+
 def create_nuscenes_infos(root_path,
                           info_prefix,
                           version='v1.0-trainval',
-                          max_sweeps=10):
+                          max_sweeps=10,
+                          trainval_meta_root=None,
+                          out_dir=None):
     """Create info file of nuscene dataset.
 
     Given the raw data, generate its related info file in pkl format.
@@ -40,9 +97,22 @@ def create_nuscenes_infos(root_path,
             Default: 'v1.0-trainval'.
         max_sweeps (int, optional): Max number of sweeps.
             Default: 10.
+        trainval_meta_root (str, optional): Alternate root containing only
+            ``v1.0-trainval`` JSON metadata. Sensor files are still resolved
+            from ``root_path``. Defaults to None.
+        out_dir (str, optional): Directory for generated info PKLs. Defaults
+            to ``root_path``.
     """
     from nuscenes.nuscenes import NuScenes
-    nusc = NuScenes(version=version, dataroot=root_path, verbose=True)
+    meta_root = (trainval_meta_root
+                 if version == 'v1.0-trainval' and
+                 trainval_meta_root is not None else root_path)
+    _validate_nuscenes_metadata(meta_root, version)
+    nusc = NuScenes(version=version, dataroot=meta_root, verbose=True)
+    if meta_root != root_path:
+        # NuScenes loads JSON tables during construction. Afterwards retain
+        # those tables but resolve samples, sweeps, and maps from root_path.
+        nusc.dataroot = root_path
     from nuscenes.utils import splits
     available_vers = ['v1.0-trainval', 'v1.0-test', 'v1.0-mini']
     assert version in available_vers
@@ -63,7 +133,8 @@ def create_nuscenes_infos(root_path,
     available_scene_names = [s['name'] for s in available_scenes]
     train_scenes = list(
         filter(lambda x: x in available_scene_names, train_scenes))
-    val_scenes = list(filter(lambda x: x in available_scene_names, val_scenes))
+    val_scenes = list(
+        filter(lambda x: x in available_scene_names, val_scenes))
     train_scenes = set([
         available_scenes[available_scene_names.index(s)]['token']
         for s in train_scenes
@@ -82,22 +153,23 @@ def create_nuscenes_infos(root_path,
     train_nusc_infos, val_nusc_infos = _fill_trainval_infos(
         nusc, train_scenes, val_scenes, test, max_sweeps=max_sweeps)
 
+    output_root = out_dir if out_dir is not None else root_path
     metadata = dict(version=version)
     if test:
         print('test sample: {}'.format(len(train_nusc_infos)))
         data = dict(infos=train_nusc_infos, metadata=metadata)
-        info_path = osp.join(root_path,
+        info_path = osp.join(output_root,
                              '{}_infos_test.pkl'.format(info_prefix))
         mmengine.dump(data, info_path)
     else:
         print('train sample: {}, val sample: {}'.format(
             len(train_nusc_infos), len(val_nusc_infos)))
         data = dict(infos=train_nusc_infos, metadata=metadata)
-        info_path = osp.join(root_path,
+        info_path = osp.join(output_root,
                              '{}_infos_train.pkl'.format(info_prefix))
         mmengine.dump(data, info_path)
         data['infos'] = val_nusc_infos
-        info_val_path = osp.join(root_path,
+        info_val_path = osp.join(output_root,
                                  '{}_infos_val.pkl'.format(info_prefix))
         mmengine.dump(data, info_val_path)
 
@@ -380,8 +452,7 @@ def export_2d_annotation(root_path, info_path, version, mono3d=True):
             (height, width, _) = mmcv.imread(cam_info['data_path']).shape
             coco_2d_dict['images'].append(
                 dict(
-                    file_name=cam_info['data_path'].split('data/nuscenes/')
-                    [-1],
+                    file_name=osp.relpath(cam_info['data_path'], root_path),
                     id=cam_info['sample_data_token'],
                     token=info['token'],
                     cam2ego_rotation=cam_info['sensor2ego_rotation'],

@@ -3,9 +3,10 @@
 
 Example:
     python tools/dataset_converters/update_infos_to_v2.py
-        --dataset kitti
-        --pkl-path ./data/kitti/kitti_infos_train.pkl
-        --out-dir ./kitti_v2/
+        --dataset nuscenes
+        --pkl-path ./data/nuscenes/nuscenes_infos_train.pkl
+        --out-dir ./data/nuscenes/
+        --data-root ./data/nuscenes/
 """
 
 import argparse
@@ -246,7 +247,7 @@ def generate_nuscenes_camera_instances(info, nusc):
     return empty_multicamera_instance
 
 
-def update_nuscenes_infos(pkl_path, out_dir):
+def update_nuscenes_infos(pkl_path, out_dir, data_root):
     camera_types = [
         'CAM_FRONT',
         'CAM_FRONT_RIGHT',
@@ -268,11 +269,12 @@ def update_nuscenes_infos(pkl_path, out_dir):
     }
     nusc = NuScenes(
         version=data_list['metadata']['version'],
-        dataroot='./data/nuscenes',
+        dataroot=data_root,
         verbose=True)
 
     print('Start updating:')
     converted_list = []
+    ignore_class_name = set()
     for i, ori_info_dict in enumerate(
             mmengine.track_iter_progress(data_list['infos'])):
         temp_data_info = get_empty_standard_data_info(
@@ -337,7 +339,6 @@ def update_nuscenes_infos(pkl_path, out_dir):
             empty_img_info['lidar2cam'] = lidar2sensor.astype(
                 np.float32).tolist()
             temp_data_info['images'][cam] = empty_img_info
-        ignore_class_name = set()
         if 'gt_boxes' in ori_info_dict:
             num_instances = ori_info_dict['gt_boxes'].shape[0]
             for i in range(num_instances):
@@ -1129,32 +1130,29 @@ def parse_args():
         default='converted_annotations',
         required=False,
         help='output direction of info pkl')
+    parser.add_argument(
+        '--data-root',
+        type=str,
+        default=None,
+        help='NuScenes data root used to load metadata during conversion.')
     args = parser.parse_args()
     return args
 
 
-def update_pkl_infos(dataset, out_dir, pkl_path):
-    if dataset.lower() == 'kitti':
-        update_kitti_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset.lower() == 'waymo':
-        update_waymo_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset.lower() == 'scannet':
-        update_scannet_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset.lower() == 'sunrgbd':
-        update_sunrgbd_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset.lower() == 'lyft':
-        update_lyft_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset.lower() == 'nuscenes':
-        update_nuscenes_infos(pkl_path=pkl_path, out_dir=out_dir)
-    elif dataset.lower() == 's3dis':
-        update_s3dis_infos(pkl_path=pkl_path, out_dir=out_dir)
-    else:
-        raise NotImplementedError(f'Do not support convert {dataset} to v2.')
+def update_pkl_infos(dataset, out_dir, pkl_path, data_root=None):
+    if dataset.lower() != 'nuscenes':
+        raise ValueError(
+            'This FCOS3D workflow supports only the NuScenes dataset.')
+    if data_root is None:
+        raise ValueError('data_root is required when updating NuScenes PKLs.')
+    update_nuscenes_infos(
+        pkl_path=pkl_path, out_dir=out_dir, data_root=data_root)
 
 
 if __name__ == '__main__':
     args = parse_args()
-    if args.out_dir is None:
-        args.out_dir = args.root_dir
     update_pkl_infos(
-        dataset=args.dataset, out_dir=args.out_dir, pkl_path=args.pkl_path)
+        dataset=args.dataset,
+        out_dir=args.out_dir,
+        pkl_path=args.pkl_path,
+        data_root=args.data_root)

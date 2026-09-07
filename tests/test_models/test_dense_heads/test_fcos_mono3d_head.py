@@ -183,3 +183,23 @@ class TestFCOSMono3DHead(TestCase):
         self.assertEqual(
             pred_attr_labels.shape, torch.Size([200]),
             'the shape of predicted 3d bbox attribute labels should be [200]')
+
+        # Rescaling image coordinates must not alter camera-space 3D boxes.
+        # Resize3D scales cam2img along with the image, so camera geometry
+        # must keep using the resized coordinate system.
+        resized_img_metas = [
+            dict(
+                cam2img=[[630.4237223002349, 0.0, 403.984122262777],
+                         [0.0, 630.4237223002349, 247.6672134371044],
+                         [0.0, 0.0, 1.0]],
+                scale_factor=np.array([0.5, 0.5, 0.5, 0.5],
+                                      dtype=np.float32),
+                box_type_3d=CameraInstance3DBoxes)
+        ]
+        resized_results_list_3d, _ = fcos_mono3d_head.predict_by_feat(
+            *ret_dict, resized_img_metas, rescale=True)
+        unscaled_results_list_3d, _ = fcos_mono3d_head.predict_by_feat(
+            *ret_dict, resized_img_metas, rescale=False)
+        self.assertTrue(
+            torch.allclose(resized_results_list_3d[0].bboxes_3d.tensor,
+                           unscaled_results_list_3d[0].bboxes_3d.tensor))
