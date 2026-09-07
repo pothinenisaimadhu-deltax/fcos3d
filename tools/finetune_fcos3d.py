@@ -165,6 +165,10 @@ def main():
         cfg.train_dataloader.batch_size = args.batch_size
     if args.num_workers is not None:
         cfg.train_dataloader.num_workers = args.num_workers
+        if args.num_workers == 0:
+            # PyTorch requires persistent_workers=False when no worker
+            # subprocesses are created.
+            cfg.train_dataloader.persistent_workers = False
     if args.epochs is not None:
         cfg.train_cfg.max_epochs = args.epochs
         for scheduler in cfg.param_scheduler:

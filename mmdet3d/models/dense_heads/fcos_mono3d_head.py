@@ -641,7 +641,10 @@ class FCOSMono3DHead(AnchorFreeMono3DHead):
             bbox_pred = bbox_pred.permute(1, 2,
                                           0).reshape(-1,
                                                      sum(self.group_reg_dims))
-            bbox_pred = bbox_pred[:, :self.bbox_code_size]
+            # Prediction tensors can be reused by callers (for example,
+            # rescale=True and rescale=False comparisons).  Decode a clone
+            # so post-processing does not mutate the model outputs in-place.
+            bbox_pred = bbox_pred[:, :self.bbox_code_size].clone()
             nms_pre = cfg.get('nms_pre', -1)
             if nms_pre > 0 and scores.shape[0] > nms_pre:
                 max_scores, _ = (scores * centerness[:, None]).max(dim=1)
@@ -655,9 +658,12 @@ class FCOSMono3DHead(AnchorFreeMono3DHead):
                 attr_score = attr_score[topk_inds]
             # change the offset to actual center predictions
             bbox_pred[:, :2] = points - bbox_pred[:, :2]
-            if rescale:
-                bbox_pred[:, :2] /= bbox_pred[:, :2].new_tensor(
-                    scale_factor[:2])
+            # ``cam2img`` is already updated by Resize3D.  Keep the
+            # predicted center in that same resized image frame while
+            # converting it to camera coordinates; rescaling it first would
+            # pair original-image pixels with resized intrinsics and shift
+            # the 3D box.  This method returns 3D boxes only, so ``rescale``
+            # does not require a separate 2D-center output here.
             pred_center2d = bbox_pred[:, :3].clone()
             bbox_pred[:, :3] = points_img2cam(bbox_pred[:, :3], view)
             mlvl_centers_2d.append(pred_center2d)
