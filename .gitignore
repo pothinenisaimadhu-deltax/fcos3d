@@ -141,6 +141,14 @@ mmdet3d/evaluation/functional/waymo_utils/compute_segmentation_metrics_main
 # Claude Flow runtime data
 .claude-flow/data/
 .claude-flow/logs/
+.agents/
+AGENTS.md
+.claude-flow/neural/
+.claude-flow/policy/
 # Environment variables
 .env.local
 .env.*.local
+# Ruflo / agent runtime files
+.agents/
+AGENTS.md
+.claude-flow/
