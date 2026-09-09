@@ -1,0 +1,367 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2250" height="3850" viewBox="0 0 2250 3850">
+<title>FCOS3D detailed PKL data, training and testing flow</title>
+<desc>30 editable steps with source paths, call sequences, inputs, outputs and configuration values. JSON preparation routes removed. Source checked 08 September 2026.</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 Z" fill="#8ba0ae"/></marker></defs>
+<rect width="2250" height="3850" fill="#f5f8fa"/>
+<text x="40" y="61" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#183442">FCOS3D / from dataset to 3D predictions</text>
+<text x="40" y="100" font-family="Arial, sans-serif" font-size="18" font-weight="400" fill="#405969">Detailed PKL workflow  |  Functions, files, inputs and outputs  |  Camera-only model  |  Source snapshot: 08 Sep 2026</text>
+<text x="40" y="136" font-family="Arial, sans-serif" font-size="17" font-weight="400" fill="#405969">Read each column top to bottom. D10 feeds T03; T10 supplies the checkpoint to E01. E10 branches from E06.</text>
+<text x="40" y="166" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#708593">Solid arrows show stage progression; dashed arrows show optional branches. Numbered cross-references keep the full graph uncluttered.</text>
+<text x="40" y="218" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#287c9e">01 / DATA PREPARATION</text>
+<path d="M40 235 H720" stroke="#cfdae2"/>
+<g id="D01"><rect x="40" y="260" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="278" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="290" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D01</text>
+<text x="104" y="291" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Raw dataset and configuration</text>
+<text x="60" y="320" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: configs/_base_/datasets/nus-mono3d.py</text>
+<text x="60" y="348" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: NuScenes-format camera images + versioned raw tables</text>
+<text x="60" y="376" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: samples/CAM_*/; scene, sample, sample_data, sample_annotation,</text>
+<text x="60" y="396" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">calibrated_sensor, ego_pose and category tables.</text>
+<text x="60" y="424" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">MODEL INPUT: use_camera=True; use_lidar=False. Converter metadata may</text>
+<text x="60" y="444" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">still reference LiDAR. Source files stay in place.</text>
+</g>
+<path d="M380.0 554 V592" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D02"><rect x="40" y="600" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="618" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="630" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D02</text>
+<text x="104" y="631" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Start the PKL preparation job</text>
+<text x="60" y="660" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/create_data.py</text>
+<text x="60" y="688" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: parse_args() -&gt; nuscenes_data_prep()</text>
+<text x="60" y="716" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: --root-path, --out-dir, --version, --extra-tag; optional</text>
+<text x="60" y="736" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">alternate metadata root.</text>
+<text x="60" y="764" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">CALLS: create_nuscenes_infos(); then update_pkl_infos() for each split.</text>
+<text x="60" y="784" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">Camera-only use: --skip-gt-database.</text>
+</g>
+<path d="M380.0 894 V932" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D03"><rect x="40" y="940" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="958" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="970" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D03</text>
+<text x="104" y="971" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Validate metadata and choose scenes</text>
+<text x="60" y="1000" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/dataset_converters/nuscenes_converter.py</text>
+<text x="60" y="1028" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: create_nuscenes_infos() -&gt; _validate_nuscenes_metadata() -&gt;</text>
+<text x="60" y="1048" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">get_available_scenes()</text>
+<text x="60" y="1076" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: NuScenes(version, dataroot), official train/val or mini scene</text>
+<text x="60" y="1096" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">lists.</text>
+<text x="60" y="1124" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: scene-token sets filtered by availability. Renamed/custom</text>
+<text x="60" y="1144" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">scenes need compatible split handling; this route uses official names.</text>
+</g>
+<path d="M380.0 1234 V1272" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D04"><rect x="40" y="1280" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="1298" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="1310" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D04</text>
+<text x="104" y="1311" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Collect keyframe and sensor records</text>
+<text x="60" y="1340" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/dataset_converters/nuscenes_converter.py</text>
+<text x="60" y="1368" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: _fill_trainval_infos() -&gt; obtain_sensor2top()</text>
+<text x="60" y="1396" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: samples, camera records, sensor calibration, ego poses,</text>
+<text x="60" y="1416" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">annotations and sweep metadata.</text>
+<text x="60" y="1444" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: legacy records with token, cams, transforms, timestamp and</text>
+<text x="60" y="1464" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">available ground-truth boxes; mmengine.dump() writes infos + metadata.</text>
+</g>
+<path d="M380.0 1574 V1612" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D05"><rect x="40" y="1620" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="1638" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="1650" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D05</text>
+<text x="104" y="1651" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Convert each split to the v2 schema</text>
+<text x="60" y="1680" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/dataset_converters/update_infos_to_v2.py</text>
+<text x="60" y="1708" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: update_pkl_infos() -&gt; update_nuscenes_infos()</text>
+<text x="60" y="1736" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: &lt;prefix&gt;_infos_train.pkl and &lt;prefix&gt;_infos_val.pkl; raw</text>
+<text x="60" y="1756" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">NuScenes tables.</text>
+<text x="60" y="1784" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: metainfo + data_list. Converts poses to matrices, normalizes</text>
+<text x="60" y="1804" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">paths and timestamps, and maps categories to class indices.</text>
+</g>
+<path d="M380.0 1914 V1952" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D06"><rect x="40" y="1960" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="1978" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="1990" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D06</text>
+<text x="104" y="1991" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Generate camera-specific ground truth</text>
+<text x="60" y="2020" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/dataset_converters/update_infos_to_v2.py;</text>
+<text x="60" y="2040" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">mmdet3d/datasets/convert_utils.py</text>
+<text x="60" y="2068" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: generate_nuscenes_camera_instances() -&gt; get_nuscenes_2d_boxes()</text>
+<text x="60" y="2096" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: per-camera sample_data_token, annotation boxes and calibrated</text>
+<text x="60" y="2116" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">camera transforms.</text>
+<text x="60" y="2144" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: cam_instances[CAM_*] with bbox, bbox_3d, labels, center_2d,</text>
+<text x="60" y="2164" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">depth, velocity and attributes when present. Called during v2</text>
+<text x="60" y="2184" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">conversion.</text>
+</g>
+<path d="M380.0 2254 V2292" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D07"><rect x="40" y="2300" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="2318" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="2330" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D07</text>
+<text x="104" y="2331" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Write manifests and resolve image paths</text>
+<text x="60" y="2360" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/dataset_converters/update_infos_to_v2.py;</text>
+<text x="60" y="2380" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">configs/_base_/datasets/nus-mono3d.py</text>
+<text x="60" y="2408" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: mmengine.dump(converted_data_info, out_path, pkl)</text>
+<text x="60" y="2436" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: nuscenes_infos_train.pkl / nuscenes_infos_val.pkl. Each record</text>
+<text x="60" y="2456" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">has sample_idx, token, images and transforms.</text>
+<text x="60" y="2484" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">LOADING: ann_file selects a split; data_root + camera data_prefix</text>
+<text x="60" y="2504" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">resolve image paths. Evaluator ann_file must match the evaluated split.</text>
+</g>
+<path d="M380.0 2594 V2632" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D08"><rect x="40" y="2640" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="2658" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="2670" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D08</text>
+<text x="104" y="2671" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Expand a keyframe into camera samples</text>
+<text x="60" y="2700" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/datasets/nuscenes_dataset.py</text>
+<text x="60" y="2728" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: NuScenesDataset.parse_data_info()</text>
+<text x="60" y="2756" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: one v2 keyframe; load_type=mv_image_based; images and</text>
+<text x="60" y="2776" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">cam_instances indexed by camera.</text>
+<text x="60" y="2804" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: one item per camera; sample_idx = keyframe_index * 6 +</text>
+<text x="60" y="2824" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">camera_index. Retains token and ego2global; attaches camera-specific</text>
+<text x="60" y="2844" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">instances.</text>
+</g>
+<path d="M380.0 2934 V2972" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D09"><rect x="40" y="2980" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="2998" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="3010" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D09</text>
+<text x="104" y="3011" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Parse labels and camera-space boxes</text>
+<text x="60" y="3040" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/datasets/nuscenes_dataset.py</text>
+<text x="60" y="3068" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: parse_ann_info() -&gt; parent parser -&gt; _filter_with_mask() -&gt;</text>
+<text x="60" y="3088" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CameraInstance3DBoxes(...)</text>
+<text x="60" y="3116" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: camera instances, validity fields, labels and velocity.</text>
+<text x="60" y="3144" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: gt_bboxes_3d, gt_labels_3d, 2D boxes, centers_2d, depths and</text>
+<text x="60" y="3164" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">attributes. Appends velocity; replaces NaN velocity with zero.</text>
+</g>
+<path d="M380.0 3274 V3312" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="D10"><rect x="40" y="3320" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="40" y="3338" width="4" height="27" rx="2" fill="#287c9e"/>
+<text x="60" y="3350" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#287c9e">D10</text>
+<text x="104" y="3351" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Build the dataloader and fetch a batch</text>
+<text x="60" y="3380" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/datasets/det3d_dataset.py; MMEngine dataset / runner</text>
+<text x="60" y="3408" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#287c9e">CALL: Det3DDataset.prepare_data() -&gt; configured transform pipeline</text>
+<text x="60" y="3436" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: individual camera records; DefaultSampler(shuffle=True) for</text>
+<text x="60" y="3456" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">training.</text>
+<text x="60" y="3484" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT -&gt; T03: image samples for transforms. Configured training</text>
+<text x="60" y="3504" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">batch_size=2 means two camera images, not two six-camera keyframes.</text>
+</g>
+<text x="785" y="218" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#14816c">02 / TRAINING &amp; VALIDATION</text>
+<path d="M785 235 H1465" stroke="#cfdae2"/>
+<g id="T01"><rect x="785" y="260" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="278" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="290" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T01</text>
+<text x="849" y="291" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Load configuration and launch training</text>
+<text x="805" y="320" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/train.py; tools/finetune_fcos3d.py</text>
+<text x="805" y="348" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: parse_args() -&gt; main() -&gt; Config.fromfile() -&gt;</text>
+<text x="805" y="368" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">Runner.from_cfg(cfg) -&gt; runner.train()</text>
+<text x="805" y="396" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: FCOS3D config, work directory, optional --amp / --resume and</text>
+<text x="805" y="416" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">cfg-options.</text>
+<text x="805" y="444" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: runner with model, dataloaders, optimizer, schedule, evaluator</text>
+<text x="805" y="464" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">and hooks. RUNNERS.build(cfg) handles a configured custom runner.</text>
+</g>
+<path d="M1125.0 554 V592" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T02"><rect x="785" y="600" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="618" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="630" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T02</text>
+<text x="849" y="631" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Initialize parameters and training state</text>
+<text x="805" y="660" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: configs/fcos3d/*1x_nus-mono3d.py; tools/finetune_fcos3d.py</text>
+<text x="805" y="688" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: Model initialization / load_from; optional</text>
+<text x="805" y="708" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">FreezeModulesHook.before_train()</text>
+<text x="805" y="736" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: pretrained initialization or checkpoint. Resume also restores</text>
+<text x="805" y="756" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">training state.</text>
+<text x="805" y="784" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">CONFIG: ResNet-101 + DCNv2 + FPN + FCOSMono3DHead. Fine-tune launcher</text>
+<text x="805" y="804" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">can freeze modules; before_train_epoch() controls timed unfreezing.</text>
+</g>
+<path d="M1125.0 894 V932" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T03"><rect x="785" y="940" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="958" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="970" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T03</text>
+<text x="849" y="971" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Load images and supervised targets</text>
+<text x="805" y="1000" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/datasets/transforms/loading.py</text>
+<text x="805" y="1028" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: LoadImageFromFileMono3D -&gt; LoadAnnotations3D</text>
+<text x="805" y="1056" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT &lt;- D10: image path, cam2img and parsed annotations.</text>
+<text x="805" y="1084" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: img, 2D/3D boxes, labels, attr_labels, centers_2d and depths.</text>
+<text x="805" y="1104" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">Targets supervise training; inference only needs image and metadata.</text>
+</g>
+<path d="M1125.0 1234 V1272" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T04"><rect x="785" y="1280" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="1298" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="1310" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T04</text>
+<text x="849" y="1311" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Apply geometry transforms and pack</text>
+<text x="805" y="1340" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/datasets/transforms/transforms_3d.py; formating.py</text>
+<text x="805" y="1368" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: Resize3D -&gt; RandomFlip3D -&gt; Pack3DDetInputs</text>
+<text x="805" y="1396" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">CONFIG: resize=(1600,900), keep_ratio=True; horizontal flip</text>
+<text x="805" y="1416" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">probability=0.5.</text>
+<text x="805" y="1444" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: packed image + Det3DDataSample. Resize keeps pixels, centers_2d</text>
+<text x="805" y="1464" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">and cam2img aligned; flip updates the corresponding geometry.</text>
+</g>
+<path d="M1125.0 1574 V1612" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T05"><rect x="785" y="1620" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="1638" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="1650" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T05</text>
+<text x="849" y="1651" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Preprocess and extract image features</text>
+<text x="805" y="1680" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/models/data_preprocessors/data_preprocessor.py;</text>
+<text x="805" y="1700" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">detectors/single_stage_mono3d.py</text>
+<text x="805" y="1728" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: Det3DDataPreprocessor -&gt; SingleStageMono3DDetector.extract_feat()</text>
+<text x="805" y="1756" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: batch images; active config uses BGR means</text>
+<text x="805" y="1776" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">[103.530,116.280,123.675], std=1 and padding to a multiple of 32.</text>
+<text x="805" y="1804" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: ResNet-101 backbone features -&gt; FPN: five 256-channel feature</text>
+<text x="805" y="1824" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">maps, with strides [8,16,32,64,128].</text>
+</g>
+<path d="M1125.0 1914 V1952" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T06"><rect x="785" y="1960" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="1978" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="1990" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T06</text>
+<text x="849" y="1991" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Run dense prediction branches</text>
+<text x="805" y="2020" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/models/dense_heads/fcos_mono3d_head.py</text>
+<text x="805" y="2048" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: FCOSMono3DHead.forward() -&gt; forward_single()</text>
+<text x="805" y="2076" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: FPN feature levels; two stacked head convolutions.</text>
+<text x="805" y="2104" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: 10-class scores; regression (2 offsets, 1 depth, 3 size, 1 yaw,</text>
+<text x="805" y="2124" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">2 velocity); direction, attributes and centerness branches.</text>
+</g>
+<path d="M1125.0 2254 V2292" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T07"><rect x="785" y="2300" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="2318" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="2330" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T07</text>
+<text x="849" y="2331" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Assign targets and calculate losses</text>
+<text x="805" y="2360" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/models/detectors/single_stage.py; dense_heads/fcos_mono3d_head.py</text>
+<text x="805" y="2388" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: SingleStage3DDetector.loss() -&gt; head loss path -&gt; loss_by_feat()</text>
+<text x="805" y="2408" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">-&gt; get_targets() -&gt; _get_target_single()</text>
+<text x="805" y="2436" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: predictions, feature locations and per-image ground truth;</text>
+<text x="805" y="2456" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">center sampling assigns positives.</text>
+<text x="805" y="2484" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: loss_cls, loss_offset, loss_depth, loss_size, loss_rotsin,</text>
+<text x="805" y="2504" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">loss_centerness; configured loss_velo, loss_dir and loss_attr.</text>
+</g>
+<path d="M1125.0 2594 V2632" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T08"><rect x="785" y="2640" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="2658" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="2670" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T08</text>
+<text x="849" y="2671" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Backpropagate and update parameters</text>
+<text x="805" y="2700" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: MMEngine BaseModel / OptimWrapper; active FCOS3D config</text>
+<text x="805" y="2728" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: train_step() -&gt; parse_losses() -&gt; OptimWrapper.update_params()</text>
+<text x="805" y="2756" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: aggregate differentiable loss. Backward -&gt; gradient clipping -&gt;</text>
+<text x="805" y="2776" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">optimizer step.</text>
+<text x="805" y="2804" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">DEFAULT RUN: SGD, lr=0.002, momentum=0.9; max gradient norm=35. LR</text>
+<text x="805" y="2824" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">warmup=500 iterations, milestones=8/11. Fine-tune config lr=0.001.</text>
+</g>
+<path d="M1125.0 2934 V2972" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T09"><rect x="785" y="2980" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="2998" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="3010" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T09</text>
+<text x="849" y="3011" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Repeat epochs and run validation</text>
+<text x="805" y="3040" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: configs/_base_/schedules/mmdet-schedule-1x.py; MMEngine loops</text>
+<text x="805" y="3068" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: EpochBasedTrainLoop -&gt; ValLoop -&gt; model.val_step()</text>
+<text x="805" y="3096" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">CONTROL: default 12 epochs, val_interval=1. Every training iteration</text>
+<text x="805" y="3116" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">repeats T03-T08.</text>
+<text x="805" y="3144" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: validation predictions follow the test prediction/evaluation</text>
+<text x="805" y="3164" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">path. No optimization during validation. Overrides may change this</text>
+<text x="805" y="3184" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">schedule.</text>
+</g>
+<path d="M1125.0 3274 V3312" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="T10"><rect x="785" y="3320" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="785" y="3338" width="4" height="27" rx="2" fill="#14816c"/>
+<text x="805" y="3350" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#14816c">T10</text>
+<text x="849" y="3351" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Save checkpoints and training evidence</text>
+<text x="805" y="3380" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: configs/_base_/default_runtime.py; MMEngine hooks</text>
+<text x="805" y="3408" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#14816c">CALL: CheckpointHook; logger and parameter-scheduler hooks</text>
+<text x="805" y="3436" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: learned model parameters, optimizer / scheduler state and run</text>
+<text x="805" y="3456" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">metadata.</text>
+<text x="805" y="3484" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT -&gt; E01: work_dirs/&lt;run&gt;/*.pth plus training logs. Validation</text>
+<text x="805" y="3504" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">uses the held-out val split; the default test loader reuses that split.</text>
+</g>
+<text x="1530" y="218" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#7656a6">03 / TESTING &amp; OUTPUTS</text>
+<path d="M1530 235 H2210" stroke="#cfdae2"/>
+<g id="E01"><rect x="1530" y="260" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="278" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="290" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E01</text>
+<text x="1594" y="291" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Select config and trained checkpoint</text>
+<text x="1550" y="320" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/test.py</text>
+<text x="1550" y="348" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: parse_args() -&gt; main() -&gt; Config.fromfile() -&gt;</text>
+<text x="1550" y="368" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">validate_fcos3d_nuscenes_config()</text>
+<text x="1550" y="396" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT &lt;- T10: config path + checkpoint path. Guard checks FCOSMono3D</text>
+<text x="1550" y="416" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">and NuScenesDataset for val/test.</text>
+<text x="1550" y="444" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: cfg.load_from = checkpoint; optional CLI overrides. The</text>
+<text x="1550" y="464" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">configuration guard runs before cfg-options are merged.</text>
+</g>
+<path d="M1870.0 554 V592" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E02"><rect x="1530" y="600" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="618" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="630" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E02</text>
+<text x="1594" y="631" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Construct the testing runtime</text>
+<text x="1550" y="660" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/test.py; MMEngine Runner / TestLoop</text>
+<text x="1550" y="688" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: Runner.from_cfg(cfg) -&gt; runner.test() -&gt; model.test_step()</text>
+<text x="1550" y="716" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: checkpoint, test_dataloader, test_evaluator and optional</text>
+<text x="1550" y="736" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">visualization hook.</text>
+<text x="1550" y="764" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: evaluation-mode model and sequential test batches. Current</text>
+<text x="1550" y="784" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">test_dataloader = val_dataloader; this is not a separate third dataset</text>
+<text x="1550" y="804" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">split.</text>
+</g>
+<path d="M1870.0 894 V932" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E03"><rect x="1530" y="940" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="958" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="970" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E03</text>
+<text x="1594" y="971" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Prepare inference images</text>
+<text x="1550" y="1000" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: configs/fcos3d/*1x_nus-mono3d.py; mmdet3d/datasets/transforms/</text>
+<text x="1550" y="1028" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: LoadImageFromFileMono3D -&gt; Resize3D -&gt; Pack3DDetInputs -&gt;</text>
+<text x="1550" y="1048" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">Det3DDataPreprocessor</text>
+<text x="1550" y="1076" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: image plus camera calibration and metadata; active test</text>
+<text x="1550" y="1096" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">Resize3D(scale_factor=1.0).</text>
+<text x="1550" y="1124" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: normalized / padded image tensor and data samples. Test</text>
+<text x="1550" y="1144" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">pipeline does not load training targets for model inference.</text>
+</g>
+<path d="M1870.0 1234 V1272" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E04"><rect x="1530" y="1280" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="1298" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="1310" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E04</text>
+<text x="1594" y="1311" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Compute predictions at all feature levels</text>
+<text x="1550" y="1340" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/models/detectors/single_stage.py; single_stage_mono3d.py</text>
+<text x="1550" y="1368" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: SingleStage3DDetector.predict() -&gt; extract_feat() -&gt; head</text>
+<text x="1550" y="1388" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">prediction path</text>
+<text x="1550" y="1416" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: images -&gt; ResNet-101 / DCNv2 -&gt; FPN.</text>
+<text x="1550" y="1444" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: FCOSMono3DHead.forward() predictions at five scales.</text>
+<text x="1550" y="1464" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">predict_by_feat() processes the resulting per-level tensors for each</text>
+<text x="1550" y="1484" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">image.</text>
+</g>
+<path d="M1870.0 1574 V1612" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E05"><rect x="1530" y="1620" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="1638" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="1650" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E05</text>
+<text x="1594" y="1651" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Decode camera-space 3D geometry</text>
+<text x="1550" y="1680" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/models/dense_heads/fcos_mono3d_head.py;</text>
+<text x="1550" y="1700" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">task_modules/coders/fcos3d_bbox_coder.py</text>
+<text x="1550" y="1728" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: _predict_by_feat_single(); FCOS3DBBoxCoder.decode() /</text>
+<text x="1550" y="1748" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">decode_yaw()</text>
+<text x="1550" y="1776" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: locations, offset/depth/size/yaw predictions, camera matrix and</text>
+<text x="1550" y="1796" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">direction classes.</text>
+<text x="1550" y="1824" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: camera-space boxes. Feature-stage decode occurs in</text>
+<text x="1550" y="1844" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">forward_single(); postprocessing reconstructs 3D centers and resolves</text>
+<text x="1550" y="1864" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">yaw.</text>
+</g>
+<path d="M1870.0 1914 V1952" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E06"><rect x="1530" y="1960" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="1978" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="1990" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E06</text>
+<text x="1594" y="1991" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Filter scores and suppress duplicates</text>
+<text x="1550" y="2020" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/models/dense_heads/fcos_mono3d_head.py; models/layers/</text>
+<text x="1550" y="2048" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: box3d_multiclass_nms() -&gt; add_pred_to_datasample()</text>
+<text x="1550" y="2076" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">CONFIG: nms_pre=1000; score_thr=0.05; rotated NMS threshold=0.8;</text>
+<text x="1550" y="2096" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">max_per_img=200.</text>
+<text x="1550" y="2124" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: pred_instances_3d with bboxes_3d, scores_3d, labels_3d and</text>
+<text x="1550" y="2144" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">attributes. Thresholds are the checked-in defaults and can be</text>
+<text x="1550" y="2164" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">overridden.</text>
+</g>
+<path d="M1870.0 2254 V2292" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E07"><rect x="1530" y="2300" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="2318" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="2330" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E07</text>
+<text x="1594" y="2331" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Collect results and align with samples</text>
+<text x="1550" y="2360" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/evaluation/metrics/nuscenes_metric.py</text>
+<text x="1550" y="2388" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: NuScenesMetric.process() -&gt; compute_metrics() -&gt; format_results()</text>
+<text x="1550" y="2416" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: per-camera predictions; evaluator reads ann_file[data_list] and</text>
+<text x="1550" y="2436" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">dataset metainfo.</text>
+<text x="1550" y="2464" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: results organized for formatting. Matching sample indices,</text>
+<text x="1550" y="2484" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">keyframe tokens, calibration and evaluator split are essential.</text>
+</g>
+<path d="M1870.0 2594 V2632" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E08"><rect x="1530" y="2640" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="2658" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="2670" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E08</text>
+<text x="1594" y="2671" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Merge camera predictions and serialize</text>
+<text x="1550" y="2700" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/evaluation/metrics/nuscenes_metric.py</text>
+<text x="1550" y="2728" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: _format_camera_bbox() -&gt; output_to_nusc_box() -&gt;</text>
+<text x="1550" y="2748" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">cam_nusc_box_to_global()</text>
+<text x="1550" y="2776" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">INPUT: camera boxes, scores, labels, attributes and per-camera / ego</text>
+<text x="1550" y="2796" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">transforms.</text>
+<text x="1550" y="2824" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: merged NuScenes results_nusc.json; boxes carry sample token,</text>
+<text x="1550" y="2844" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">translation, size, rotation, velocity, class, score and attribute.</text>
+</g>
+<path d="M1870.0 2934 V2972" fill="none" stroke="#8ba0ae" stroke-width="2" marker-end="url(#arrow)"/>
+<g id="E09"><rect x="1530" y="2980" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="2998" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="3010" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E09</text>
+<text x="1594" y="3011" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Calculate metrics or keep exported results</text>
+<text x="1550" y="3040" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: mmdet3d/evaluation/metrics/nuscenes_metric.py</text>
+<text x="1550" y="3068" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: nus_evaluate() -&gt; _evaluate_single(); format_only skips metric</text>
+<text x="1550" y="3088" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">calculation</text>
+<text x="1550" y="3116" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">EVALUATE: compatible official tokens / ground truth -&gt; mAP, NDS and</text>
+<text x="1550" y="3136" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">translation, scale, orientation, velocity and attribute errors.</text>
+<text x="1550" y="3164" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">EXPORT: format_only=True requires jsonfile_prefix. For custom tokens,</text>
+<text x="1550" y="3184" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">export predictions; official metrics require matching official ground</text>
+<text x="1550" y="3204" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">truth.</text>
+</g>
+<g id="E10"><rect x="1530" y="3320" width="680" height="294" rx="12" fill="#fff" stroke="#d7e2e9"/><rect x="1530" y="3338" width="4" height="27" rx="2" fill="#7656a6"/>
+<text x="1550" y="3350" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#7656a6">E10</text>
+<text x="1594" y="3351" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#203c4b">Optional: visualize predicted 3D boxes</text>
+<text x="1550" y="3380" font-family="Arial, sans-serif" font-size="13" font-weight="400" fill="#647b8b">FILE: tools/test.py; mmdet3d/engine/hooks/visualization_hook.py</text>
+<text x="1550" y="3408" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">CALL: trigger_visualization_hook() -&gt; Det3DVisualizationHook -&gt;</text>
+<text x="1550" y="3428" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#7656a6">Det3DLocalVisualizer</text>
+<text x="1550" y="3456" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">BRANCH FROM E06: --show or --show-dir, with --task mono_det;</text>
+<text x="1550" y="3476" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">--score-thr controls drawing.</text>
+<text x="1550" y="3504" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">OUTPUT: rendered 3D box overlays. This is optional and independent of</text>
+<text x="1550" y="3524" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#405969">metric computation; visualization does not change trained weights.</text>
+</g>
+<path d="M2210 2107.0 H2222 V3467.0 H2212" fill="none" stroke="#8ba0ae" stroke-dasharray="6 6" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="40" y="3665" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#287c9e">DATA CONTRACT</text>
+<text x="40" y="3696" font-family="Arial, sans-serif" font-size="17" font-weight="400" fill="#405969">PKL: metainfo + data_list  |  Camera: img_path, cam2img, cam2ego  |  Sample: token, sample_idx, ego2global  |  Targets: cam_instances</text>
+<text x="40" y="3731" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#708593">Config values describe the checked-in FCOS3D setup; command-line overrides and fine-tune configs can change them. MMEngine names denote framework calls.</text>
+<text x="40" y="3761" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#708593">All labels and shapes remain editable vector elements. Paths are relative to the repository. The diagram follows the PKL preparation route.</text>
+</svg>

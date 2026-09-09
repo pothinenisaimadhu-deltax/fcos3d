@@ -6,11 +6,7 @@ from pyquaternion import Quaternion
 # yapf: disable
 from mmdet3d.datasets.transforms import (LoadAnnotations3D,
                                          LoadImageFromFileMono3D,
-                                         LoadMultiViewImageFromFiles,
-                                         LoadPointsFromFile,
-                                         LoadPointsFromMultiSweeps,
-                                         MultiScaleFlipAug3D, Pack3DDetInputs,
-                                         PointSegClassMapping)
+                                         Pack3DDetInputs)
 # yapf: enable
 from mmdet3d.registry import TRANSFORMS
 
@@ -29,23 +25,17 @@ def is_loading_function(transform):
             When transform is `MultiScaleFlipAug3D`, we return None.
     """
     # TODO: use more elegant way to distinguish loading modules
-    loading_functions = (LoadImageFromFile, LoadPointsFromFile,
-                         LoadAnnotations3D, LoadMultiViewImageFromFiles,
-                         LoadPointsFromMultiSweeps, Pack3DDetInputs,
-                         LoadImageFromFileMono3D, PointSegClassMapping)
+    loading_functions = (LoadImageFromFile, LoadAnnotations3D,
+                         Pack3DDetInputs, LoadImageFromFileMono3D)
     if isinstance(transform, dict):
         obj_cls = TRANSFORMS.get(transform['type'])
         if obj_cls is None:
             return False
         if obj_cls in loading_functions:
             return True
-        if obj_cls in (MultiScaleFlipAug3D, ):
-            return None
     elif callable(transform):
         if isinstance(transform, loading_functions):
             return True
-        if isinstance(transform, (MultiScaleFlipAug3D)):
-            return None
     return False
 
 

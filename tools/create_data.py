@@ -6,13 +6,12 @@ import os
 from os import path as osp
 
 from tools.dataset_converters import nuscenes_converter
-from tools.dataset_converters.create_gt_database import create_groundtruth_database
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
 
 
 def nuscenes_data_prep(root_path, info_prefix, version, out_dir,
                        max_sweeps=10, nuscenes_path=None,
-                       trainval_meta_root=None, skip_gt_database=False):
+                       trainval_meta_root=None):
     """Create and update NuScenes info files for FCOS3D."""
     data_root = nuscenes_path if nuscenes_path is not None else root_path
     data_root = osp.abspath(data_root)
@@ -42,18 +41,6 @@ def nuscenes_data_prep(root_path, info_prefix, version, out_dir,
             pkl_path=info_path,
             data_root=data_root)
 
-    if not skip_gt_database and version != 'v1.0-test':
-        create_groundtruth_database(
-            'NuScenesDataset',
-            data_root,
-            info_prefix,
-            info_path=info_paths[0],
-            database_save_path=osp.join(out_dir,
-                                        f'{info_prefix}_gt_database'),
-            db_info_save_path=osp.join(out_dir,
-                                       f'{info_prefix}_dbinfos_train.pkl'))
-
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Prepare NuScenes data for FCOS3D.')
@@ -67,9 +54,6 @@ def parse_args():
                         help='Optional sensor/metadata root; defaults to root-path.')
     parser.add_argument('--trainval-meta-root', default=None,
                         help='Optional alternate v1.0-trainval metadata root.')
-    parser.add_argument('--skip-gt-database', action='store_true',
-                        help='Skip GT database creation for camera-only FCOS3D.')
-    parser.add_argument('--only-gt-database', action='store_true')
     return parser.parse_args()
 
 
@@ -79,28 +63,16 @@ if __name__ == '__main__':
                  if args.nuscenes_path is not None else args.root_path)
     out_dir = osp.abspath(args.out_dir)
 
-    if args.only_gt_database:
-        info_path = osp.join(out_dir, f'{args.extra_tag}_infos_train.pkl')
-        create_groundtruth_database(
-            'NuScenesDataset',
-            osp.abspath(data_root),
-            args.extra_tag,
-            info_path=info_path,
-            database_save_path=osp.join(
-                out_dir, f'{args.extra_tag}_gt_database'),
-            db_info_save_path=osp.join(
-                out_dir, f'{args.extra_tag}_dbinfos_train.pkl'))
-    elif args.version == 'v1.0-mini':
+    if args.version == 'v1.0-mini':
         nuscenes_data_prep(
             args.root_path, args.extra_tag, args.version, out_dir,
-            args.max_sweeps, args.nuscenes_path,
-            skip_gt_database=args.skip_gt_database)
+            args.max_sweeps, args.nuscenes_path)
     else:
         nuscenes_data_prep(
             args.root_path, args.extra_tag, f'{args.version}-trainval',
             out_dir, args.max_sweeps, args.nuscenes_path,
-            args.trainval_meta_root, args.skip_gt_database)
+            args.trainval_meta_root)
         nuscenes_data_prep(
             args.root_path, args.extra_tag, f'{args.version}-test',
             out_dir, args.max_sweeps, args.nuscenes_path,
-            skip_gt_database=True)
+            args.trainval_meta_root)
