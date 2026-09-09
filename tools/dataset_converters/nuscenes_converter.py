@@ -85,7 +85,8 @@ def create_nuscenes_infos(root_path,
                           version='v1.0-trainval',
                           max_sweeps=10,
                           trainval_meta_root=None,
-                          out_dir=None):
+                          out_dir=None,
+                          split_json=None):
     """Create info file of nuscene dataset.
 
     Given the raw data, generate its related info file in pkl format.
@@ -102,6 +103,8 @@ def create_nuscenes_infos(root_path,
             from ``root_path``. Defaults to None.
         out_dir (str, optional): Directory for generated info PKLs. Defaults
             to ``root_path``.
+        split_json (str, optional): JSON file defining custom train and
+            validation scene-name lists. Defaults to None.
     """
     from nuscenes.nuscenes import NuScenes
     meta_root = (trainval_meta_root
@@ -128,9 +131,33 @@ def create_nuscenes_infos(root_path,
     else:
         raise ValueError('unknown')
 
-    # filter existing scenes.
+    # Filter split names against the scenes actually present.
     available_scenes = get_available_scenes(nusc)
     available_scene_names = [s['name'] for s in available_scenes]
+    if split_json is not None and version == 'v1.0-trainval':
+        with open(split_json, 'r', encoding='utf-8') as f:
+            split_data = json.load(f)
+        train_scenes = split_data.get(
+            'train', split_data.get('nuscenes_katech_train'))
+        val_scenes = split_data.get(
+            'val', split_data.get('nuscenes_katech_val'))
+        if not isinstance(train_scenes, list) or not isinstance(val_scenes, list):
+            raise ValueError(
+                'Split JSON must contain list keys "train" and "val", or '
+                '"nuscenes_katech_train" and "nuscenes_katech_val".')
+        missing_scenes = (set(train_scenes) | set(val_scenes)) - set(
+            available_scene_names)
+        if missing_scenes:
+            raise ValueError(
+                'Split JSON contains scenes not present in the dataset: {}'.format(
+                    ', '.join(sorted(missing_scenes))))
+        overlap = set(train_scenes) & set(val_scenes)
+        if overlap:
+            raise ValueError(
+                'Split JSON assigns scenes to both train and val: {}'.format(
+                    ', '.join(sorted(overlap))))
+        print('Using custom split JSON: {}'.format(osp.abspath(split_json)))
+
     train_scenes = list(
         filter(lambda x: x in available_scene_names, train_scenes))
     val_scenes = list(
