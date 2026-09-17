@@ -1,0 +1,21 @@
+Collections:
+  - Name: PGD
+    Metadata:
+      Training Data: nuScenes
+      Architecture:
+        - PGDHead
+    Paper:
+      URL: https://arxiv.org/abs/2107.14160
+      Title: 'Probabilistic and Geometric Depth: Detecting Objects in Perspective'
+    README: configs/pgd/README.md
+
+Models:
+  - Name: pgd_r101-caffe_fpn_head-gn_16xb2-1x_nus-mono3d
+    In Collection: PGD
+    Config: configs/pgd/pgd_r101-caffe_fpn_head-gn_16xb2-1x_nus-mono3d.py
+    Results:
+      - Task: 3D Object Detection
+        Dataset: nuScenes
+        Metrics:
+          mAP: 31.7
+          NDS: 39.3

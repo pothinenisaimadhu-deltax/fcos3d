@@ -3,6 +3,14 @@ import argparse
 import logging
 import os
 import os.path as osp
+import sys
+
+# Prefer this checkout over another installed/editable mmdet3d package when
+# this file is launched as ``python tools/train.py``.
+PROJECT_ROOT = osp.dirname(osp.dirname(osp.abspath(__file__)))
+if PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
 
 from mmengine.config import Config, DictAction
 from mmengine.logging import print_log
@@ -10,6 +18,24 @@ from mmengine.registry import RUNNERS
 from mmengine.runner import Runner
 
 from mmdet3d.utils import replace_ceph_backend
+
+
+def validate_fcos3d_nuscenes_config(cfg):
+    """Reject unsupported model and dataset combinations before training."""
+    allowed_heads = {'FCOSMono3DHead', 'PGDHead'}
+    model = cfg.get('model', {})
+    head = model.get('bbox_head', {})
+    if model.get('type') != 'FCOSMono3D' or head.get('type') not in allowed_heads:
+        raise ValueError(
+            'This project trains only FCOS3D or PGD (FCOS3D++); got '
+            'model={!r}, head={!r}.'.format(model.get('type'), head.get('type')))
+    for split in ('train_dataloader', 'val_dataloader', 'test_dataloader'):
+        dataset = cfg.get(split, {}).get('dataset', {})
+        if dataset.get('type') not in {
+                'NuScenesDataset', 'NuScenesJsonDataset'}:
+            raise ValueError(
+                f'This workflow requires a supported camera dataset in {split}; got '
+                f"{dataset.get('type')!r}.")
 
 
 def parse_args():
@@ -79,6 +105,8 @@ def main():
     cfg.launcher = args.launcher
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
+
+    validate_fcos3d_nuscenes_config(cfg)
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:

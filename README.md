@@ -63,7 +63,15 @@ English | [简体中文](README_zh-CN.md)
 
 ## Introduction
 
-MMDetection3D is an open source object detection toolbox based on PyTorch, towards the next-generation platform for general 3D detection. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
+This is a focused FCOS3D repository. Its supported training and evaluation
+workflows are the camera-only **FCOS3D** and **PGD (FCOS3D++)** models on
+nuScenes and custom data converted to the supplied nuScenes JSON schema. The
+upstream MMDetection3D project remains the reference for shared framework
+behavior.
+
+The nuScenes and custom-data helpers are retained. The supported model entry
+points validate camera datasets; custom data must first be converted to the
+nuScenes camera/annotation schema.
 
 The main branch works with **PyTorch 1.8+**.
 

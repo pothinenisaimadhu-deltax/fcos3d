@@ -11,9 +11,17 @@ Example:
 
 import argparse
 import copy
+import sys
 import time
 from os import path as osp
 from pathlib import Path
+
+# Make ``tools`` and the local ``mmdet3d`` package importable when this file
+# is executed directly from the repository root.
+PROJECT_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+if PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
 
 import mmengine
 import numpy as np
@@ -1140,13 +1148,17 @@ def parse_args():
 
 
 def update_pkl_infos(dataset, out_dir, pkl_path, data_root=None):
-    if dataset.lower() != 'nuscenes':
-        raise ValueError(
-            'This FCOS3D workflow supports only the NuScenes dataset.')
-    if data_root is None:
-        raise ValueError('data_root is required when updating NuScenes PKLs.')
-    update_nuscenes_infos(
-        pkl_path=pkl_path, out_dir=out_dir, data_root=data_root)
+    dataset = dataset.lower()
+    if dataset == 'nuscenes':
+        if data_root is None:
+            raise ValueError(
+                'data_root is required when updating NuScenes PKLs.')
+        update_nuscenes_infos(
+            pkl_path=pkl_path, out_dir=out_dir, data_root=data_root)
+    elif dataset == 'kitti':
+        update_kitti_infos(pkl_path=pkl_path, out_dir=out_dir)
+    else:
+        raise ValueError(f'Unsupported dataset for v2 conversion: {dataset!r}.')
 
 
 if __name__ == '__main__':
@@ -1156,3 +1168,8 @@ if __name__ == '__main__':
         out_dir=args.out_dir,
         pkl_path=args.pkl_path,
         data_root=args.data_root)
+    if args.dataset.lower() == 'nuscenes':
+        from tools.validate_fcos3d_nuscenes import validate_dataset
+
+        output_path = osp.join(args.out_dir, Path(args.pkl_path).name)
+        validate_dataset(args.data_root, [output_path])

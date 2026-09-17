@@ -1,29 +1,9 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-"""NuScenes-format JSON loader for camera-only FCOS3D.
-
-This loader is deliberately small: it reads the same v2 records normally
-stored in ``nuscenes_infos_*.pkl`` but from JSON instead.  It then delegates
-camera expansion, annotation parsing, filtering, and coordinate handling to
-``NuScenesDataset``.
-
-The JSON file must contain either ``{"data_list": [...]}`` (recommended) or
-be a JSON list of records.  Each training record must contain:
-
-* ``sample_idx`` (integer), ``token``, ``ego2global``
-* ``images``: camera name -> ``img_path``, ``height``, ``width``, ``cam2img``
-  and ``cam2ego``
-* ``cam_instances``: camera name -> list of NuScenes v2 instance dictionaries
-
-Each instance uses the normal fields consumed by ``Det3DDataset``:
-``bbox_3d``, ``bbox_label_3d``, ``bbox``, ``bbox_label``, ``center_2d``,
-``depth``, ``velocity``, and optionally ``attr_label`` and
-``bbox_3d_isvalid``.  Image paths remain relative to ``data_root`` and the
-configured camera ``data_prefix`` unless they are absolute paths.
-"""
+"""NuScenes-format JSON loader for camera-only FCOS3D and PGD."""
 
 from copy import deepcopy
 from os import path as osp
-from typing import Any, List
+from typing import List
 
 from mmengine import load
 
@@ -52,7 +32,6 @@ class NuScenesJsonDataset(NuScenesDataset):
         if isinstance(payload, dict):
             data_list = payload.get('data_list')
             if data_list is None:
-                # Allow a NuScenes-like wrapper whose records are called infos.
                 data_list = payload.get('infos')
             if data_list is None:
                 raise KeyError(
@@ -73,9 +52,6 @@ class NuScenesJsonDataset(NuScenesDataset):
         for index, raw_record in enumerate(data_list):
             record = deepcopy(raw_record)
             self._validate_record(record, index)
-            # NuScenesDataset.parse_data_info multiplies this by six when it
-            # expands a multi-camera sample.  Make string IDs safe while
-            # retaining numeric IDs supplied by a normal NuScenes manifest.
             if not isinstance(record['sample_idx'], int):
                 record['sample_idx'] = index
             normalized.append(record)
@@ -115,4 +91,3 @@ class NuScenesJsonDataset(NuScenesDataset):
                     raise KeyError(
                         f'data_list[{index}]["cam_instances"] is missing '
                         f'camera {camera!r}.')
-

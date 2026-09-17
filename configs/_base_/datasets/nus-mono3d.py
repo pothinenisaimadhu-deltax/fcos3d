@@ -1,5 +1,7 @@
 dataset_type = 'NuScenesDataset'
-data_root = 'data/nuscenes/'
+data_root = \
+    'C:/Users/saimadhu-deltax/Downloads/NuScenes_batch1/NuScenes_batch1/'
+ann_root = 'C:/Users/saimadhu-deltax/code/fcos3d/samplers/'
 class_names = [
     'car', 'truck', 'trailer', 'bus', 'construction_vehicle', 'bicycle',
     'motorcycle', 'pedestrian', 'traffic_cone', 'barrier'
@@ -66,7 +68,7 @@ train_dataloader = dict(
             CAM_BACK='samples/CAM_BACK',
             CAM_BACK_RIGHT='samples/CAM_BACK_RIGHT',
             CAM_BACK_LEFT='samples/CAM_BACK_LEFT'),
-        ann_file='nuscenes_infos_train.pkl',
+        ann_file=ann_root + 'nuscenes_infos_train.pkl',
         load_type='mv_image_based',
         pipeline=train_pipeline,
         metainfo=metainfo,
@@ -94,7 +96,7 @@ val_dataloader = dict(
             CAM_BACK='samples/CAM_BACK',
             CAM_BACK_RIGHT='samples/CAM_BACK_RIGHT',
             CAM_BACK_LEFT='samples/CAM_BACK_LEFT'),
-        ann_file='nuscenes_infos_val.pkl',
+        ann_file=ann_root + 'nuscenes_infos_val.pkl',
         load_type='mv_image_based',
         pipeline=test_pipeline,
         modality=input_modality,
@@ -108,7 +110,7 @@ test_dataloader = val_dataloader
 val_evaluator = dict(
     type='NuScenesMetric',
     data_root=data_root,
-    ann_file=data_root + 'nuscenes_infos_val.pkl',
+    ann_file=ann_root + 'nuscenes_infos_val.pkl',
     metric='bbox',
     backend_args=backend_args)
 

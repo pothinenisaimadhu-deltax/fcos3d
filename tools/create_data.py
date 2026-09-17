@@ -7,11 +7,13 @@ from os import path as osp
 
 from tools.dataset_converters import nuscenes_converter
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
+from tools.validate_fcos3d_nuscenes import validate_dataset
 
 
 def nuscenes_data_prep(root_path, info_prefix, version, out_dir,
                        max_sweeps=10, nuscenes_path=None,
-                       trainval_meta_root=None, split_json=None):
+                       trainval_meta_root=None, split_json=None,
+                       validate=True, expected_samples=None):
     """Create and update NuScenes info files for FCOS3D."""
     data_root = nuscenes_path if nuscenes_path is not None else root_path
     data_root = osp.abspath(data_root)
@@ -42,6 +44,21 @@ def nuscenes_data_prep(root_path, info_prefix, version, out_dir,
             pkl_path=info_path,
             data_root=data_root)
 
+    if validate and version != 'v1.0-test':
+        metadata_base = (trainval_meta_root
+                         if trainval_meta_root is not None else data_root)
+        metadata_root = osp.join(osp.abspath(metadata_base), version)
+        project_root = osp.dirname(osp.dirname(osp.abspath(__file__)))
+        config_path = osp.join(
+            project_root, 'configs', 'fcos3d',
+            'fcos3d_r101-caffe-dcn_fpn_head-gn_8xb2-1x_nus-mono3d.py')
+        validate_dataset(
+            data_root,
+            info_paths,
+            metadata_root=metadata_root,
+            expected_samples=expected_samples,
+            config_path=config_path)
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Prepare NuScenes data for FCOS3D.')
@@ -57,6 +74,11 @@ def parse_args():
                         help='Optional alternate v1.0-trainval metadata root.')
     parser.add_argument('--split-json', default=None,
                         help='Optional custom train/validation scene split JSON.')
+    parser.add_argument(
+        '--skip-validation', action='store_true',
+        help='Skip the automatic FCOS3D validation after V2 conversion.')
+    parser.add_argument('--expected-train-samples', type=int, default=None)
+    parser.add_argument('--expected-val-samples', type=int, default=None)
     return parser.parse_args()
 
 
@@ -68,6 +90,10 @@ if __name__ == '__main__':
     trainval_meta_root = (args.trainval_meta_root
                            if args.trainval_meta_root is not None else data_root)
     split_json = args.split_json
+    expected_samples = {
+        'train': args.expected_train_samples,
+        'val': args.expected_val_samples,
+    }
     if split_json is None and args.version != 'v1.0-mini':
         candidate = osp.join(trainval_meta_root,
                              f'{args.version}-trainval', 'splits.json')
@@ -78,12 +104,16 @@ if __name__ == '__main__':
         nuscenes_data_prep(
             args.root_path, args.extra_tag, args.version, out_dir,
             args.max_sweeps, args.nuscenes_path,
-            split_json=split_json)
+            split_json=split_json,
+            validate=not args.skip_validation,
+            expected_samples=expected_samples)
     else:
         nuscenes_data_prep(
             args.root_path, args.extra_tag, f'{args.version}-trainval',
             out_dir, args.max_sweeps, args.nuscenes_path,
-            args.trainval_meta_root, split_json)
+            args.trainval_meta_root, split_json,
+            validate=not args.skip_validation,
+            expected_samples=expected_samples)
         test_version = f'{args.version}-test'
         test_metadata_dir = osp.join(osp.abspath(data_root), test_version)
         if osp.isdir(test_metadata_dir):

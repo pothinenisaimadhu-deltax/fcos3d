@@ -2,6 +2,14 @@
 import argparse
 import os
 import os.path as osp
+import sys
+
+# Prefer this checkout over another installed/editable mmdet3d package when
+# this file is launched as ``python tools/test.py``.
+PROJECT_ROOT = osp.dirname(osp.dirname(osp.abspath(__file__)))
+if PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
 
 from mmengine.config import Config, ConfigDict, DictAction
 from mmengine.registry import RUNNERS
@@ -11,16 +19,20 @@ from mmdet3d.utils import replace_ceph_backend
 
 
 def validate_fcos3d_nuscenes_config(cfg):
-    """Restrict this testing entry point to the active FCOS3D workflow."""
-    if cfg.model.type != 'FCOSMono3D':
+    """Allow only the FCOS3D and PGD (FCOS3D++) NuScenes workflows."""
+    allowed_heads = {'FCOSMono3DHead', 'PGDHead'}
+    if cfg.model.type != 'FCOSMono3D' or \
+            cfg.model.bbox_head.type not in allowed_heads:
         raise ValueError(
-            'This project workflow is restricted to FCOSMono3D; got '
-            f"{cfg.model.type!r}.")
+            'This project workflow is restricted to FCOS3D or PGD '
+            '(FCOS3D++); got model={!r}, head={!r}.'.format(
+                cfg.model.type, cfg.model.bbox_head.type))
     for split in ('val_dataloader', 'test_dataloader'):
         dataset = cfg.get(split, {}).get('dataset', {})
-        if dataset.get('type') != 'NuScenesDataset':
+        if dataset.get('type') not in {
+                'NuScenesDataset', 'NuScenesJsonDataset'}:
             raise ValueError(
-                f'This workflow requires NuScenesDataset in {split}; got '
+                f'This workflow requires a supported camera dataset in {split}; got '
                 f"{dataset.get('type')!r}.")
 
 
@@ -115,7 +127,6 @@ def main():
 
     # load config
     cfg = Config.fromfile(args.config)
-    validate_fcos3d_nuscenes_config(cfg)
 
     # TODO: We will unify the ceph support approach with other OpenMMLab repos
     if args.ceph:
@@ -124,6 +135,8 @@ def main():
     cfg.launcher = args.launcher
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
+
+    validate_fcos3d_nuscenes_config(cfg)
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:
