@@ -95,6 +95,7 @@ class NuScenesMetric(BaseMetric):
                  format_only: bool = False,
                  jsonfile_prefix: Optional[str] = None,
                  eval_version: str = 'detection_cvpr_2019',
+                 eval_subset: bool = False,
                  collect_device: str = 'cpu',
                  backend_args: Optional[dict] = None) -> None:
         self.default_prefix = 'NuScenes metric'
@@ -120,6 +121,10 @@ class NuScenesMetric(BaseMetric):
         self.metrics = metric if isinstance(metric, list) else [metric]
 
         self.eval_version = eval_version
+        # The official devkit maps v1.0-trainval to all 6,019 validation
+        # samples.  Set this for a deliberately curated subset whose tokens
+        # are stored in ``ann_file``.
+        self.eval_subset = eval_subset
         self.eval_detection_configs = config_factory(self.eval_version)
 
     def process(self, data_batch: dict, data_samples: Sequence[dict]) -> None:
@@ -236,13 +241,17 @@ class NuScenesMetric(BaseMetric):
             'v1.0-mini': 'mini_val',
             'v1.0-trainval': 'val',
         }
-        nusc_eval = NuScenesEval(
-            nusc,
-            config=self.eval_detection_configs,
-            result_path=result_path,
-            eval_set=eval_set_map[self.version],
-            output_dir=output_dir,
-            verbose=False)
+        if self.eval_subset:
+            nusc_eval = self._build_subset_evaluator(nusc, result_path,
+                                                      output_dir)
+        else:
+            nusc_eval = NuScenesEval(
+                nusc,
+                config=self.eval_detection_configs,
+                result_path=result_path,
+                eval_set=eval_set_map[self.version],
+                output_dir=output_dir,
+                verbose=False)
         nusc_eval.main(render_curves=False)
 
         # record metrics
@@ -263,6 +272,93 @@ class NuScenesMetric(BaseMetric):
         detail[f'{metric_prefix}/NDS'] = metrics['nd_score']
         detail[f'{metric_prefix}/mAP'] = metrics['mean_ap']
         return detail
+
+    def _build_subset_evaluator(self, nusc, result_path: str,
+                                output_dir: str):
+        """Build a NuScenes evaluator for exactly the info-file tokens.
+
+        The NuScenes devkit only exposes the predefined train/val scene
+        splits.  KATECH data can be a valid, smaller subset of those scenes,
+        so load the GT directly for its annotation-file tokens instead.
+        """
+        from nuscenes.eval.common.loaders import (add_center_dist,
+                                                  filter_eval_boxes,
+                                                  load_prediction)
+        from nuscenes.eval.detection.data_classes import DetectionBox
+        from nuscenes.eval.detection.evaluate import NuScenesEval
+
+        tokens = [info['token'] for info in self.data_infos]
+        if len(tokens) != len(set(tokens)):
+            raise ValueError('The evaluation annotation file has duplicate '
+                             'sample tokens.')
+
+        try:
+            from nuscenes.eval.common.loaders import load_gt_of_sample_tokens
+            gt_boxes = load_gt_of_sample_tokens(
+                nusc, tokens, DetectionBox, verbose=False)
+        except ImportError:
+            # Compatibility with older nuscenes-devkit releases.
+            from nuscenes.eval.common.data_classes import EvalBoxes
+            from nuscenes.eval.detection.utils import category_to_detection_name
+
+            attribute_map = {attr['token']: attr['name'] for attr in nusc.attribute}
+            gt_boxes = EvalBoxes()
+            for token in tokens:
+                sample_boxes = []
+                for ann_token in nusc.get('sample', token)['anns']:
+                    ann = nusc.get('sample_annotation', ann_token)
+                    detection_name = category_to_detection_name(
+                        ann['category_name'])
+                    if detection_name is None:
+                        continue
+                    attributes = ann['attribute_tokens']
+                    if len(attributes) > 1:
+                        raise ValueError('A NuScenes annotation has more than '
+                                         'one attribute.')
+                    attribute_name = (attribute_map[attributes[0]]
+                                      if attributes else '')
+                    sample_boxes.append(
+                        DetectionBox(
+                            sample_token=token,
+                            translation=ann['translation'],
+                            size=ann['size'],
+                            rotation=ann['rotation'],
+                            velocity=nusc.box_velocity(ann_token)[:2],
+                            num_pts=ann['num_lidar_pts'] + ann['num_radar_pts'],
+                            detection_name=detection_name,
+                            detection_score=-1.0,
+                            attribute_name=attribute_name))
+                gt_boxes.add_boxes(token, sample_boxes)
+
+        # NuScenesEval checks the split in __init__. Construct the same
+        # object state here after supplying subset ground truth.
+        nusc_eval = NuScenesEval.__new__(NuScenesEval)
+        nusc_eval.nusc = nusc
+        nusc_eval.result_path = result_path
+        nusc_eval.eval_set = 'custom_subset'
+        nusc_eval.output_dir = output_dir
+        nusc_eval.plot_dir = osp.join(output_dir, 'plots')
+        nusc_eval.verbose = False
+        nusc_eval.cfg = self.eval_detection_configs
+        mmengine.mkdir_or_exist(output_dir)
+        mmengine.mkdir_or_exist(nusc_eval.plot_dir)
+        nusc_eval.pred_boxes, nusc_eval.meta = load_prediction(
+            result_path, nusc_eval.cfg.max_boxes_per_sample, DetectionBox,
+            verbose=False)
+        nusc_eval.gt_boxes = gt_boxes
+        if set(nusc_eval.pred_boxes.sample_tokens) != set(tokens):
+            raise ValueError('Prediction tokens do not match the tokens in '
+                             f'{self.ann_file}.')
+        nusc_eval.pred_boxes = add_center_dist(nusc, nusc_eval.pred_boxes)
+        nusc_eval.gt_boxes = add_center_dist(nusc, nusc_eval.gt_boxes)
+        nusc_eval.pred_boxes = filter_eval_boxes(
+            nusc, nusc_eval.pred_boxes, nusc_eval.cfg.class_range,
+            verbose=False)
+        nusc_eval.gt_boxes = filter_eval_boxes(
+            nusc, nusc_eval.gt_boxes, nusc_eval.cfg.class_range,
+            verbose=False)
+        nusc_eval.sample_tokens = nusc_eval.gt_boxes.sample_tokens
+        return nusc_eval
 
     def format_results(
         self,

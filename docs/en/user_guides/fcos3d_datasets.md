@@ -1,5 +1,9 @@
 # FCOS3D dataset workflows
 
+For the complete generation procedure, validator coverage, current KATECH
+batch-2 results, troubleshooting, and go/no-go checklist, see
+[FCOS3D NuScenes data generation and validation](fcos3d_nuscenes_validation.md).
+
 ## nuScenes
 
 Use `python -m tools.create_data nuscenes --root-path DATA --out-dir DATA`.
@@ -23,8 +27,11 @@ python tools/validate_fcos3d_nuscenes.py `
 ```
 
 Use `--expected-train-samples` and `--expected-val-samples` when exact split
-sizes are part of the dataset contract. Visual alignment and finite-loss checks
-still require rendered sample inspection and a short training run.
+sizes differ from the standalone validator defaults of 1000 and 218. The
+standalone command also builds the resolved model, requires an exact checkpoint
+key/shape match, and loads one real training batch with zero workers. Visual GT
+alignment still requires inspection of rendered samples; a training/loss
+iteration is intentionally outside this validator.
 
 ## Custom camera data
 
