@@ -47,6 +47,9 @@ def parse_args():
                              'the preferred option for a subset dataset.')
     parser.add_argument('--output-dir', required=True,
                         help='Directory for stitched PNGs and MP4')
+    parser.add_argument('--image-kind', choices=('3d', '2d'), default='3d',
+                        help='Use standard 3D renders or *_2d renders. '
+                             'Defaults to 3d.')
     parser.add_argument('--fps', type=float, default=10.0)
     parser.add_argument('--max-frames', type=int, default=0,
                         help='0 means all complete six-camera frames')
@@ -61,7 +64,15 @@ def parse_args():
 
 def indexed_images(input_root: Path, max_time_delta_us: int,
                    camera_source_root: Path | None = None,
-                   ann_file: Path | None = None):
+                   ann_file: Path | None = None,
+                   image_kind: str = '3d'):
+    def is_selected_image(path: Path) -> bool:
+        if not path.is_file() or path.suffix.lower() not in {
+                '.jpg', '.jpeg', '.png'}:
+            return False
+        return path.stem.endswith('_2d') if image_kind == '2d' \
+            else not path.stem.endswith('_2d')
+
     samples_dir = input_root / 'samples'
     if ann_file is not None:
         # A NuScenes sample explicitly records its six camera images. This
@@ -75,7 +86,7 @@ def indexed_images(input_root: Path, max_time_delta_us: int,
 
         files = [
             path for path in input_root.rglob('*')
-            if path.is_file() and path.suffix.lower() in {'.jpg', '.jpeg', '.png'}
+            if is_selected_image(path)
         ]
         by_name = {path.name: path for path in files}
         by_stem = {path.stem: path for path in files}
@@ -106,7 +117,7 @@ def indexed_images(input_root: Path, max_time_delta_us: int,
     if not samples_dir.is_dir():
         files = sorted((
             path for path in input_root.iterdir()
-            if path.is_file() and path.suffix.lower() in {'.jpg', '.jpeg', '.png'}),
+            if is_selected_image(path)),
             key=lambda path: int(path.stem) if path.stem.isdigit() else path.stem)
         if camera_source_root is None:
             return [
@@ -141,9 +152,10 @@ def indexed_images(input_root: Path, max_time_delta_us: int,
 
         camera_files = {camera: [] for camera in CAMERAS}
         for path in files:
-            if not path.stem.isdigit():
+            timestamp_stem = path.stem.removesuffix('_2d')
+            if not timestamp_stem.isdigit():
                 continue
-            timestamp = int(path.stem)
+            timestamp = int(timestamp_stem)
             if timestamp in exact_camera and timestamp not in duplicate_timestamps:
                 camera_files[exact_camera[timestamp]].append((timestamp, path))
                 continue
@@ -170,7 +182,7 @@ def indexed_images(input_root: Path, max_time_delta_us: int,
                 raise FileNotFoundError(f'Missing camera directory: {camera_dir}')
             files = [
                 path for path in camera_dir.iterdir()
-                if path.is_file() and path.suffix.lower() in {'.jpg', '.jpeg', '.png'}
+                if is_selected_image(path)
             ]
             if not files or not all(path.stem.isdigit() for path in files):
                 raise ValueError(
@@ -179,43 +191,20 @@ def indexed_images(input_root: Path, max_time_delta_us: int,
                 ((int(path.stem), path) for path in files),
                 key=lambda item: item[0])
 
-    # CAM_FRONT is the temporal anchor.  Match each other camera to the
-    # nearest *unused* timestamp, preserving chronological order.  Pairing by
-    # list index is incorrect when one view has a dropped/extra frame.
-    anchor = camera_files['CAM_FRONT']
-    cursors = {camera: 0 for camera in CAMERAS}
+    # The files are already separated by camera folders. Pair each camera's
+    # chronological frame sequence by index, which is robust when rendered
+    # image filenames do not retain synchronized NuScenes timestamps.
+    frame_count = min(len(camera_files[camera]) for camera in CAMERAS)
     groups = []
-    skipped = 0
-    for anchor_timestamp, anchor_path in anchor:
-        paths = {'CAM_FRONT': anchor_path}
-        proposed_cursors = {}
-        valid = True
-        for camera in CAMERAS:
-            if camera == 'CAM_FRONT':
-                continue
-            entries = camera_files[camera]
-            cursor = cursors[camera]
-            if cursor >= len(entries):
-                valid = False
-                break
-            timestamps = [item[0] for item in entries]
-            position = bisect.bisect_left(timestamps, anchor_timestamp, cursor)
-            candidates = [i for i in (position - 1, position)
-                          if cursor <= i < len(entries)]
-            selected = min(candidates,
-                           key=lambda i: abs(entries[i][0] - anchor_timestamp))
-            timestamp, path = entries[selected]
-            delta = abs(timestamp - anchor_timestamp)
-            if delta > max_time_delta_us:
-                valid = False
-                break
-            paths[camera] = path
-            proposed_cursors[camera] = selected + 1
-        if valid:
-            groups.append((anchor_timestamp, paths, CAMERAS))
-            cursors.update(proposed_cursors)
-        else:
-            skipped += 1
+    for index in range(frame_count):
+        paths = {
+            camera: camera_files[camera][index][1]
+            for camera in CAMERAS
+        }
+        source_index = camera_files['CAM_FRONT'][index][0]
+        groups.append((source_index, paths, CAMERAS))
+
+    skipped = max(len(camera_files[camera]) for camera in CAMERAS) - frame_count
     return groups, skipped
 
 
@@ -250,7 +239,8 @@ def main():
                           if args.camera_source_root else None)
     groups, skipped = indexed_images(
         input_root, args.max_time_delta_us, camera_source_root,
-        Path(args.ann_file).resolve() if args.ann_file else None)
+        Path(args.ann_file).resolve() if args.ann_file else None,
+        args.image_kind)
     complete = groups
     if args.max_frames > 0:
         complete = complete[:args.max_frames]
