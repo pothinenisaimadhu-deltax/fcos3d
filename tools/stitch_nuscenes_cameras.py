@@ -63,48 +63,51 @@ def indexed_images(input_root: Path, max_time_delta_us: int,
                    camera_source_root: Path | None = None,
                    ann_file: Path | None = None):
     samples_dir = input_root / 'samples'
+    if ann_file is not None:
+        # A NuScenes sample explicitly records its six camera images. This
+        # remains correct for subset PKLs and unsynchronized camera clocks.
+        try:
+            from mmengine import load
+            infos = load(str(ann_file))['data_list']
+        except ImportError:
+            with ann_file.open('rb') as file:
+                infos = pickle.load(file)['data_list']
+
+        files = [
+            path for path in input_root.rglob('*')
+            if path.is_file() and path.suffix.lower() in {'.jpg', '.jpeg', '.png'}
+        ]
+        by_name = {path.name: path for path in files}
+        by_stem = {path.stem: path for path in files}
+        groups = []
+        skipped = 0
+        for index, info in enumerate(infos):
+            paths = {}
+            for camera in CAMERAS:
+                image = info.get('images', {}).get(camera)
+                image_path = image.get('img_path') if image else None
+                if image_path is None:
+                    continue
+                image_name = Path(image_path).name
+                nested_path = samples_dir / camera / image_name
+                path = (nested_path if nested_path.is_file() else
+                        by_name.get(image_name) or by_stem.get(
+                            Path(image_name).stem))
+                if path is not None:
+                    paths[camera] = path
+            if len(paths) == len(CAMERAS):
+                front_name = Path(info['images']['CAM_FRONT']['img_path']).stem
+                source_index = int(front_name) if front_name.isdigit() else index
+                groups.append((source_index, paths, CAMERAS))
+            else:
+                skipped += 1
+        return groups, skipped
+
     if not samples_dir.is_dir():
         files = sorted((
             path for path in input_root.iterdir()
             if path.is_file() and path.suffix.lower() in {'.jpg', '.jpeg', '.png'}),
             key=lambda path: int(path.stem) if path.stem.isdigit() else path.stem)
-        if ann_file is not None:
-            # A NuScenes sample explicitly records its six camera images.
-            # This remains correct for subset PKLs and for rigs whose camera
-            # clocks are not synchronized closely enough for timestamp joins.
-            try:
-                from mmengine import load
-                infos = load(str(ann_file))['data_list']
-            except ImportError:
-                with ann_file.open('rb') as file:
-                    infos = pickle.load(file)['data_list']
-
-            by_name = {path.name: path for path in files}
-            by_stem = {path.stem: path for path in files}
-            groups = []
-            skipped = 0
-            for index, info in enumerate(infos):
-                paths = {}
-                for camera in CAMERAS:
-                    image = info.get('images', {}).get(camera)
-                    image_path = image.get('img_path') if image else None
-                    if image_path is None:
-                        continue
-                    image_name = Path(image_path).name
-                    path = by_name.get(image_name) or by_stem.get(
-                        Path(image_name).stem)
-                    if path is not None:
-                        paths[camera] = path
-                if len(paths) == len(CAMERAS):
-                    front_name = Path(
-                        info['images']['CAM_FRONT']['img_path']).stem
-                    source_index = (int(front_name) if front_name.isdigit()
-                                    else index)
-                    groups.append((source_index, paths, CAMERAS))
-                else:
-                    skipped += 1
-            return groups, skipped
-
         if camera_source_root is None:
             return [
                 (index, dict(zip(CAMERAS, files[index:index + len(CAMERAS)])),

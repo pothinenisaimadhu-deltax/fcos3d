@@ -206,8 +206,15 @@ class Det3DVisualizationHook(Hook):
                 if self.test_out_dir is not None:
                     if isinstance(img_path, list):
                         img_path = img_path[0]
-                    out_file = osp.basename(img_path)
-                    out_file = osp.join(self.test_out_dir, out_file)
+                    # Camera folders commonly reuse a frame basename.  A
+                    # flat output directory would overwrite views from other
+                    # cameras, so preserve the NuScenes samples/<camera>/
+                    # layout in the prediction visualization output.
+                    camera_name = osp.basename(osp.dirname(img_path))
+                    out_dir = osp.join(self.test_out_dir, 'samples',
+                                       camera_name)
+                    mkdir_or_exist(out_dir)
+                    out_file = osp.join(out_dir, osp.basename(img_path))
 
             if self.vis_task in [
                     'lidar_det', 'multi-modality_det', 'lidar_seg'
