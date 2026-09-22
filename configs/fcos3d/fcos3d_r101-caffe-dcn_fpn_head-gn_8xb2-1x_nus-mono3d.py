@@ -1,9 +1,24 @@
 _base_ = [
-    '../_base_/datasets/nus-mono3d.py', '../_base_/models/fcos3d.py',
-    '../_base_/schedules/mmdet-schedule-1x.py', '../_base_/default_runtime.py'
+    '../_base_/datasets/nus-mono3d.py',
+    '../_base_/models/fcos3d.py',
+    '../_base_/schedules/mmdet-schedule-1x.py',
+    '../_base_/default_runtime.py'
 ]
-# model settings
+
+# --------------------------------------------------
+# Classes: train only on car
+# --------------------------------------------------
+class_names = ('car',)
+metainfo = dict(classes=class_names)
+
+# --------------------------------------------------
+# Model settings
+# --------------------------------------------------
 model = dict(
+    # Other bbox_head settings are inherited from the base config.
+    bbox_head=dict(
+        num_classes=1
+    ),
     data_preprocessor=dict(
         type='Det3DDataPreprocessor',
         mean=[103.530, 116.280, 123.675],
@@ -11,13 +26,22 @@ model = dict(
         bgr_to_rgb=False,
         pad_size_divisor=32),
     backbone=dict(
-        dcn=dict(type='DCNv2', deform_groups=1, fallback_on_stride=False),
-        stage_with_dcn=(False, False, True, True)))
+        dcn=dict(
+            type='DCNv2',
+            deform_groups=1,
+            fallback_on_stride=False),
+        stage_with_dcn=(False, False, True, True))
+)
 
 backend_args = None
 
+# --------------------------------------------------
+# Training pipeline
+# --------------------------------------------------
 train_pipeline = [
-    dict(type='LoadImageFromFileMono3D', backend_args=backend_args),
+    dict(
+        type='LoadImageFromFileMono3D',
+        backend_args=backend_args),
     dict(
         type='LoadAnnotations3D',
         with_bbox=True,
@@ -26,35 +50,86 @@ train_pipeline = [
         with_bbox_3d=True,
         with_label_3d=True,
         with_bbox_depth=True),
+  
     # Resize3D keeps image pixels, centers_2d, and cam2img in one frame.
     dict(type='Resize3D', scale=(1600, 900), keep_ratio=True),
-    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
+
+    dict(
+        type='RandomFlip3D',
+        flip_ratio_bev_horizontal=0.5),
     dict(
         type='Pack3DDetInputs',
         keys=[
-            'img', 'gt_bboxes', 'gt_bboxes_labels', 'attr_labels',
-            'gt_bboxes_3d', 'gt_labels_3d', 'centers_2d', 'depths'
-        ]),
+            'img',
+            'gt_bboxes',
+            'gt_bboxes_labels',
+            'attr_labels',
+            'gt_bboxes_3d',
+            'gt_labels_3d',
+            'centers_2d',
+            'depths'
+        ])
 ]
+
+# --------------------------------------------------
+# Validation / test pipeline
+# --------------------------------------------------
 test_pipeline = [
-    dict(type='LoadImageFromFileMono3D', backend_args=backend_args),
-    # Keep inference calibration consistent with the resized image.
-    dict(type='Resize3D', scale_factor=1.0),
-    dict(type='Pack3DDetInputs', keys=['img'])
+    dict(
+        type='LoadImageFromFileMono3D',
+        backend_args=backend_args),
+    dict(type='Resize3D', scale=(1600, 900), keep_ratio=True),
+    dict(
+        type='Pack3DDetInputs',
+        keys=['img'])
 ]
 
+# --------------------------------------------------
+# Dataloaders
+# Dataset paths and other settings remain inherited.
+# --------------------------------------------------
 train_dataloader = dict(
-    batch_size=2, num_workers=2, dataset=dict(pipeline=train_pipeline))
-test_dataloader = dict(dataset=dict(pipeline=test_pipeline))
-val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
+    batch_size=16,
+    num_workers=4,
+    dataset=dict(
+        pipeline=train_pipeline,
+        metainfo=metainfo)
+)
 
-# optimizer
+val_dataloader = dict(
+    dataset=dict(
+        pipeline=test_pipeline,
+        metainfo=metainfo)
+)
+
+test_dataloader = dict(
+    dataset=dict(
+        pipeline=test_pipeline,
+        metainfo=metainfo)
+)
+
+# The KATECH validation set is a subset of NuScenes validation scenes.
+# Evaluate against exactly the sample tokens listed in its annotation PKL.
+val_evaluator = dict(eval_subset=True)
+test_evaluator = val_evaluator
+
+# --------------------------------------------------
+# Optimizer
+# --------------------------------------------------
 optim_wrapper = dict(
-    optimizer=dict(lr=0.002),
-    paramwise_cfg=dict(bias_lr_mult=2., bias_decay_mult=0.),
-    clip_grad=dict(max_norm=35, norm_type=2))
+    optimizer=dict(
+        lr=0.000025),
+    paramwise_cfg=dict(
+        bias_lr_mult=2.,
+        bias_decay_mult=0.),
+    clip_grad=dict(
+        max_norm=35,
+        norm_type=2)
+)
 
-# learning rate
+# --------------------------------------------------
+# Learning-rate schedule
+# --------------------------------------------------
 param_scheduler = [
     dict(
         type='LinearLR',
@@ -69,11 +144,11 @@ param_scheduler = [
         by_epoch=True,
         milestones=[8, 11],
         gamma=0.1)
-    ]
+]
 
 # Validate every epoch and retain both the latest resumable checkpoint and
 # the checkpoint with the highest NuScenes Detection Score (NDS).
-train_cfg = dict(val_interval=1)
+train_cfg = dict(val_interval=2)
 default_hooks = dict(
     checkpoint=dict(
         interval=1,
