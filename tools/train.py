@@ -38,6 +38,29 @@ def validate_fcos3d_nuscenes_config(cfg):
                 f"{dataset.get('type')!r}.")
 
 
+def configure_nuscenes_best_metric(cfg):
+    """Select the NDS key produced by the configured evaluation mode.
+
+    The car-only evaluator publishes ``CustomCarOnly/NDS`` while the usual
+    NuScenes evaluator publishes ``NuScenes/NDS``.  Keeping this selection in
+    the training entry point prevents a completed validation epoch from
+    crashing during best-checkpoint saving when switching between the modes.
+    """
+    checkpoint = cfg.get('default_hooks', {}).get('checkpoint')
+    if not checkpoint or checkpoint.get('save_best') is None:
+        return
+
+    metainfo = cfg.get('val_dataloader', {}).get('dataset', {}).get(
+        'metainfo', {})
+    classes = metainfo.get('classes', ())
+    if isinstance(classes, str):
+        classes = (classes, )
+
+    evaluator_name = ('CustomCarOnly' if len(classes) == 1 else 'NuScenes')
+    checkpoint['save_best'] = (
+        f'NuScenes metric/pred_instances_3d_{evaluator_name}/NDS')
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a 3D detector')
     parser.add_argument('config', help='train config file path')
@@ -107,6 +130,7 @@ def main():
         cfg.merge_from_dict(args.cfg_options)
 
     validate_fcos3d_nuscenes_config(cfg)
+    configure_nuscenes_best_metric(cfg)
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:

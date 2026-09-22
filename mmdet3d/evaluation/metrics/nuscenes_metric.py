@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+from copy import deepcopy
 import tempfile
 from os import path as osp
 from typing import Dict, List, Optional, Sequence, Tuple, Union
@@ -252,12 +253,22 @@ class NuScenesMetric(BaseMetric):
                 eval_set=eval_set_map[self.version],
                 output_dir=output_dir,
                 verbose=False)
+
+        # The standard devkit evaluates every class in its configuration.
+        # Restrict that configuration only for an explicitly car-only model;
+        # multi-class models retain normal NuScenes evaluation.
+        car_only = classes is not None and tuple(classes) == ('car', )
+        if car_only:
+            nusc_eval.cfg = deepcopy(nusc_eval.cfg)
+            nusc_eval.cfg.class_names = ['car']
+            print('Custom evaluation: car only')
         nusc_eval.main(render_curves=False)
 
         # record metrics
         metrics = mmengine.load(osp.join(output_dir, 'metrics_summary.json'))
         detail = dict()
-        metric_prefix = f'{result_name}_NuScenes'
+        evaluator_name = 'CustomCarOnly' if car_only else 'NuScenes'
+        metric_prefix = f'{result_name}_{evaluator_name}'
         for name in classes:
             for k, v in metrics['label_aps'][name].items():
                 val = float(f'{v:.4f}')
@@ -358,9 +369,22 @@ class NuScenesMetric(BaseMetric):
             nusc_eval.pred_boxes = pred_boxes
         if gt_boxes is not None:
             nusc_eval.gt_boxes = gt_boxes
-        nusc_eval.pred_boxes = filter_eval_boxes(
-            nusc, nusc_eval.pred_boxes, nusc_eval.cfg.class_range,
-            verbose=False)
+        # ``filter_eval_boxes`` cannot infer DetectionBox when every image
+        # has zero predictions: its internal sentinel remains ``None`` and
+        # it raises "Invalid box type: None". An empty prediction set is
+        # valid (and common in an early sanity run), and needs no filtering.
+        has_predictions = any(
+            nusc_eval.pred_boxes[token]
+            for token in nusc_eval.pred_boxes.sample_tokens)
+        if has_predictions:
+            nusc_eval.pred_boxes = filter_eval_boxes(
+                nusc, nusc_eval.pred_boxes, nusc_eval.cfg.class_range,
+                verbose=False)
+        else:
+            logger = MMLogger.get_current_instance()
+            logger.warning(
+                'No predictions survived the score threshold; evaluating an '
+                'empty prediction set.')
         nusc_eval.gt_boxes = filter_eval_boxes(
             nusc, nusc_eval.gt_boxes, nusc_eval.cfg.class_range,
             verbose=False)

@@ -69,4 +69,15 @@ param_scheduler = [
         by_epoch=True,
         milestones=[8, 11],
         gamma=0.1)
-]
+    ]
+
+# Validate every epoch and retain both the latest resumable checkpoint and
+# the checkpoint with the highest NuScenes Detection Score (NDS).
+train_cfg = dict(val_interval=1)
+default_hooks = dict(
+    checkpoint=dict(
+        interval=1,
+        save_last=True,
+        max_keep_ckpts=3,
+        save_best='NuScenes metric/pred_instances_3d_NuScenes/NDS',
+        rule='greater'))
