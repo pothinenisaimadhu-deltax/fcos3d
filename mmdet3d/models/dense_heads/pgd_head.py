@@ -90,7 +90,9 @@ class PGDHead(FCOSMono3DHead):
                      base_dims=((0.8, 1.73, 0.6), (1.76, 1.73, 0.6),
                                 (3.9, 1.56, 1.6)),
                      code_size=7),
+                 debug_finite: bool = False,
                  **kwargs) -> None:
+        self.debug_finite = debug_finite
         self.use_depth_classifier = use_depth_classifier
         self.use_onlyreg_proj = use_onlyreg_proj
         self.depth_branch = depth_branch
@@ -124,6 +126,17 @@ class PGDHead(FCOSMono3DHead):
             self.loss_consistency = MODELS.build(loss_consistency)
         if self.pred_keypoints:
             self.kpts_start = 9 if self.pred_velo else 7
+
+    def _assert_finite(self, name: str, *values: Tensor) -> None:
+        """Identify the first PGD-only intermediate that becomes invalid."""
+        if not self.debug_finite:
+            return
+        for value in values:
+            if value is not None and not torch.isfinite(value).all():
+                count = (~torch.isfinite(value)).sum().item()
+                raise FloatingPointError(
+                    f'PGD non-finite tensor: {name}; '
+                    f'{count}/{value.numel()} values are NaN or Inf.')
 
     def _init_layers(self):
         """Initialize layers of the head."""
@@ -322,6 +335,11 @@ class PGDHead(FCOSMono3DHead):
                 predicted 2D boxes and keypoint targets (if necessary).
         """
         views = [np.array(img_meta['cam2img']) for img_meta in batch_img_metas]
+        if self.debug_finite:
+            for index, view in enumerate(views):
+                if not np.isfinite(view).all():
+                    raise FloatingPointError(
+                        f'PGD non-finite camera calibration: cam2img[{index}]')
         num_imgs = len(batch_img_metas)
         img_idx = []
         for label in labels_3d:
@@ -365,6 +383,8 @@ class PGDHead(FCOSMono3DHead):
 
         pos_decoded_bbox2d_preds = distance2bbox(pos_points,
                                                  pos_strided_bbox2d_preds)
+        self._assert_finite('2D box decode', pos_decoded_bbox2d_preds,
+                            pos_strided_bbox_preds, pos_bbox_targets_3d)
 
         pos_strided_bbox_preds[:, :2] = \
             pos_points - pos_strided_bbox_preds[:, :2]
@@ -437,6 +457,8 @@ class PGDHead(FCOSMono3DHead):
         minxy = torch.min(box_corners_in_image, dim=1)[0]
         maxxy = torch.max(box_corners_in_image, dim=1)[0]
         proj_bbox2d_preds = torch.cat([minxy, maxxy], dim=1)
+        self._assert_finite('3D-to-2D projection', proj_bbox2d_preds,
+                            pos_decoded_bbox2d_preds)
 
         outputs = (proj_bbox2d_preds, pos_decoded_bbox2d_preds)
 
@@ -598,6 +620,10 @@ class PGDHead(FCOSMono3DHead):
         labels_3d, bbox_targets_3d, centerness_targets, attr_targets = \
             self.get_targets(
                 all_level_points, batch_gt_instances_3d, batch_gt_instances)
+        for level, (prediction, target) in enumerate(
+                zip(bbox_preds, bbox_targets_3d)):
+            self._assert_finite(f'bbox prediction/target level {level}',
+                                prediction, target)
 
         num_imgs = cls_scores[0].size(0)
         # flatten cls_scores and targets
@@ -697,6 +723,8 @@ class PGDHead(FCOSMono3DHead):
                 pos_bbox_targets_3d[:, 2],
                 weight=bbox_weights[:, 2],
                 avg_factor=equal_weights.sum())
+            self._assert_finite('direct depth prediction/target',
+                                pos_bbox_preds[:, 2], pos_bbox_targets_3d[:, 2])
             # depth classification loss
             if self.use_depth_classifier:
                 pos_prob_depth_preds = self.bbox_coder.decode_prob_depth(
@@ -719,6 +747,8 @@ class PGDHead(FCOSMono3DHead):
                         weight=bbox_weights[:, 2],
                         avg_factor=equal_weights.sum())
                 loss_dict['loss_depth'] = loss_fuse_depth
+                self._assert_finite('fused depth prediction/loss',
+                                    pos_prob_depth_preds, loss_fuse_depth)
 
                 proj_bbox2d_inputs += (pos_depth_cls_preds, )
 
@@ -740,6 +770,10 @@ class PGDHead(FCOSMono3DHead):
                     pos_bbox_targets_3d[:, -4:],
                     weight=bbox_weights[:, -4:],
                     avg_factor=equal_weights.sum())
+                self._assert_finite('2D box prediction/target/loss',
+                                    pos_bbox_preds[:, -4:],
+                                    pos_bbox_targets_3d[:, -4:],
+                                    loss_dict['loss_bbox2d'])
                 if not self.pred_keypoints:
                     proj_bbox2d_preds, pos_decoded_bbox2d_preds = \
                         self.get_proj_bbox2d(*proj_bbox2d_inputs)
@@ -748,6 +782,10 @@ class PGDHead(FCOSMono3DHead):
                     pos_decoded_bbox2d_preds,
                     weight=bbox_weights[:, -4:],
                     avg_factor=equal_weights.sum())
+                self._assert_finite('consistency inputs/loss',
+                                    proj_bbox2d_preds,
+                                    pos_decoded_bbox2d_preds,
+                                    loss_dict['loss_consistency'])
 
             loss_dict['loss_centerness'] = self.loss_centerness(
                 pos_centerness, pos_centerness_targets)
