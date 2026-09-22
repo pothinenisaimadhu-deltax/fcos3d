@@ -349,8 +349,15 @@ class NuScenesMetric(BaseMetric):
         if set(nusc_eval.pred_boxes.sample_tokens) != set(tokens):
             raise ValueError('Prediction tokens do not match the tokens in '
                              f'{self.ann_file}.')
-        nusc_eval.pred_boxes = add_center_dist(nusc, nusc_eval.pred_boxes)
-        nusc_eval.gt_boxes = add_center_dist(nusc, nusc_eval.gt_boxes)
+        # nuscenes-devkit versions differ here: older releases return the
+        # updated EvalBoxes while newer ones update in place and return None.
+        # Do not replace valid predictions/ground truth with that None.
+        pred_boxes = add_center_dist(nusc, nusc_eval.pred_boxes)
+        gt_boxes = add_center_dist(nusc, nusc_eval.gt_boxes)
+        if pred_boxes is not None:
+            nusc_eval.pred_boxes = pred_boxes
+        if gt_boxes is not None:
+            nusc_eval.gt_boxes = gt_boxes
         nusc_eval.pred_boxes = filter_eval_boxes(
             nusc, nusc_eval.pred_boxes, nusc_eval.cfg.class_range,
             verbose=False)
