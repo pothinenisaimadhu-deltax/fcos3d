@@ -6,9 +6,12 @@ _base_ = [
 ]
 
 # --------------------------------------------------
-# Classes: train only on car
+# Official nuScenes detection classes.  Keeping all ten classes is required
+# for comparable nuScenes mAP/NDS scores.
 # --------------------------------------------------
-class_names = ('car',)
+class_names = (
+    'car', 'truck', 'trailer', 'bus', 'construction_vehicle', 'bicycle',
+    'motorcycle', 'pedestrian', 'traffic_cone', 'barrier')
 metainfo = dict(classes=class_names)
 
 # --------------------------------------------------
@@ -17,7 +20,7 @@ metainfo = dict(classes=class_names)
 model = dict(
     # Other bbox_head settings are inherited from the base config.
     bbox_head=dict(
-        num_classes=1
+        num_classes=10
     ),
     data_preprocessor=dict(
         type='Det3DDataPreprocessor',
@@ -108,10 +111,9 @@ test_dataloader = dict(
         metainfo=metainfo)
 )
 
-# The KATECH validation set is a subset of NuScenes validation scenes.
-# Evaluate against exactly the sample tokens listed in its annotation PKL.
-val_evaluator = dict(eval_subset=True)
-test_evaluator = val_evaluator
+# Inherit the standard full nuScenes validation evaluator from the base
+# dataset config.  Subset evaluation is useful for local development but is
+# not comparable with the published nuScenes validation benchmark.
 
 # --------------------------------------------------
 # Optimizer
@@ -133,6 +135,7 @@ optim_wrapper = dict(
 param_scheduler = [
     dict(
         type='LinearLR',
+        # Match the original FCOS3D warm-up (0.002 / 3 -> 0.002).
         start_factor=1.0 / 3,
         by_epoch=False,
         begin=0,
@@ -148,7 +151,7 @@ param_scheduler = [
 
 # Validate every epoch and retain both the latest resumable checkpoint and
 # the checkpoint with the highest NuScenes Detection Score (NDS).
-train_cfg = dict(val_interval=2)
+train_cfg = dict(max_epochs=12, val_interval=2)
 default_hooks = dict(
     checkpoint=dict(
         interval=1,

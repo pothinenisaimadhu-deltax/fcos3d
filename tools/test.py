@@ -19,18 +19,21 @@ from mmdet3d.utils import replace_ceph_backend
 
 
 def validate_fcos3d_nuscenes_config(cfg):
-    """Allow only the FCOS3D and PGD (FCOS3D++) NuScenes workflows."""
+    """Allow the supported monocular and multi-view NuScenes workflows."""
     allowed_heads = {'FCOSMono3DHead', 'PGDHead'}
-    if cfg.model.type != 'FCOSMono3D' or \
-            cfg.model.bbox_head.type not in allowed_heads:
+    is_mono = (cfg.model.type == 'FCOSMono3D' and
+               cfg.model.get('bbox_head', {}).get('type') in allowed_heads)
+    is_mv = (cfg.model.type == 'MultiViewDfM' and
+             cfg.model.get('bbox_head_3d', {}).get('type') ==
+             'NuScenesVelocityAnchor3DHead')
+    if not (is_mono or is_mv):
         raise ValueError(
-            'This project workflow is restricted to FCOS3D or PGD '
-            '(FCOS3D++); got model={!r}, head={!r}.'.format(
-                cfg.model.type, cfg.model.bbox_head.type))
+            'Unsupported NuScenes model: {!r}.'.format(cfg.model.type))
     for split in ('val_dataloader', 'test_dataloader'):
         dataset = cfg.get(split, {}).get('dataset', {})
-        if dataset.get('type') not in {
-                'NuScenesDataset', 'NuScenesJsonDataset'}:
+        allowed_datasets = ({'NuScenesMultiViewDataset'} if is_mv else
+                            {'NuScenesDataset', 'NuScenesJsonDataset'})
+        if dataset.get('type') not in allowed_datasets:
             raise ValueError(
                 f'This workflow requires a supported camera dataset in {split}; got '
                 f"{dataset.get('type')!r}.")

@@ -25,14 +25,20 @@ def validate_fcos3d_nuscenes_config(cfg):
     allowed_heads = {'FCOSMono3DHead', 'PGDHead'}
     model = cfg.get('model', {})
     head = model.get('bbox_head', {})
-    if model.get('type') != 'FCOSMono3D' or head.get('type') not in allowed_heads:
+    is_mono = (model.get('type') == 'FCOSMono3D'
+               and head.get('type') in allowed_heads)
+    is_mv = (model.get('type') == 'MultiViewDfM'
+             and model.get('bbox_head_3d', {}).get('type')
+             == 'NuScenesVelocityAnchor3DHead')
+    if not (is_mono or is_mv):
         raise ValueError(
-            'This project trains only FCOS3D or PGD (FCOS3D++); got '
+            'This project supports FCOS3D, PGD and NuScenes MV-FCOS3D; got '
             'model={!r}, head={!r}.'.format(model.get('type'), head.get('type')))
     for split in ('train_dataloader', 'val_dataloader', 'test_dataloader'):
         dataset = cfg.get(split, {}).get('dataset', {})
-        if dataset.get('type') not in {
-                'NuScenesDataset', 'NuScenesJsonDataset'}:
+        allowed_datasets = ({'NuScenesMultiViewDataset'} if is_mv else
+                            {'NuScenesDataset', 'NuScenesJsonDataset'})
+        if dataset.get('type') not in allowed_datasets:
             raise ValueError(
                 f'This workflow requires a supported camera dataset in {split}; got '
                 f"{dataset.get('type')!r}.")

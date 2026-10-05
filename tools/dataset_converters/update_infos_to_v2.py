@@ -26,6 +26,7 @@ sys.path.insert(0, PROJECT_ROOT)
 import mmengine
 import numpy as np
 from nuscenes.nuscenes import NuScenes
+from tools.dataset_converters.nuscenes_camera_order import NUSCENES_CAMERA_NAMES
 
 from mmdet3d.datasets.convert_utils import (convert_annos,
                                             get_kitti_style_2d_boxes,
@@ -232,14 +233,7 @@ def clear_data_info_unused_keys(data_info):
 def generate_nuscenes_camera_instances(info, nusc):
 
     # get bbox annotations for camera
-    camera_types = [
-        'CAM_FRONT',
-        'CAM_FRONT_RIGHT',
-        'CAM_FRONT_LEFT',
-        'CAM_BACK',
-        'CAM_BACK_LEFT',
-        'CAM_BACK_RIGHT',
-    ]
+    camera_types = NUSCENES_CAMERA_NAMES
 
     empty_multicamera_instance = get_empty_multicamera_instances(camera_types)
 
@@ -256,14 +250,7 @@ def generate_nuscenes_camera_instances(info, nusc):
 
 
 def update_nuscenes_infos(pkl_path, out_dir, data_root):
-    camera_types = [
-        'CAM_FRONT',
-        'CAM_FRONT_RIGHT',
-        'CAM_FRONT_LEFT',
-        'CAM_BACK',
-        'CAM_BACK_LEFT',
-        'CAM_BACK_RIGHT',
-    ]
+    camera_types = NUSCENES_CAMERA_NAMES
     print(f'{pkl_path} will be modified.')
     if out_dir in pkl_path:
         print(f'Warning, you may overwriting '
@@ -325,7 +312,12 @@ def update_nuscenes_infos(pkl_path, out_dir, data_root):
                 'sample_data_token']
             temp_data_info['lidar_sweeps'].append(temp_lidar_sweep)
         temp_data_info['images'] = {}
-        for cam in ori_info_dict['cams']:
+        missing_cameras = set(camera_types) - set(ori_info_dict['cams'])
+        if missing_cameras:
+            raise ValueError(
+                f"Sample {ori_info_dict['token']} is missing NuScenes cameras: "
+                f'{sorted(missing_cameras)}')
+        for cam in camera_types:
             empty_img_info = get_empty_img_info()
             empty_img_info['img_path'] = Path(
                 ori_info_dict['cams'][cam]['data_path']).name

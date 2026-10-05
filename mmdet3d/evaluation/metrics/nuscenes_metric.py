@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from copy import deepcopy
 import tempfile
 from os import path as osp
 from typing import Dict, List, Optional, Sequence, Tuple, Union
@@ -259,7 +258,9 @@ class NuScenesMetric(BaseMetric):
         # multi-class models retain normal NuScenes evaluation.
         car_only = classes is not None and tuple(classes) == ('car', )
         if car_only:
-            nusc_eval.cfg = deepcopy(nusc_eval.cfg)
+            # NuScenesEval is newly constructed for each validation pass, so
+            # changing its class list is safe. Do not deepcopy DetectionConfig:
+            # it contains an unpickleable dict_keys view.
             nusc_eval.cfg.class_names = ['car']
             print('Custom evaluation: car only')
         nusc_eval.main(render_curves=False)

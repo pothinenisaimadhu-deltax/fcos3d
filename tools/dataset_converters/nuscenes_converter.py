@@ -15,6 +15,7 @@ from shapely.geometry import MultiPoint, box
 
 from mmdet3d.datasets.convert_utils import NuScenesNameMapping
 from mmdet3d.structures import points_cam2img
+from tools.dataset_converters.nuscenes_camera_order import NUSCENES_CAMERA_NAMES
 
 nus_categories = ('car', 'truck', 'trailer', 'bus', 'construction_vehicle',
                   'bicycle', 'motorcycle', 'pedestrian', 'traffic_cone',
@@ -295,14 +296,10 @@ def _fill_trainval_infos(nusc,
         e2g_r_mat = Quaternion(e2g_r).rotation_matrix
 
         # obtain 6 image's information per frame
-        camera_types = [
-            'CAM_FRONT',
-            'CAM_FRONT_RIGHT',
-            'CAM_FRONT_LEFT',
-            'CAM_BACK',
-            'CAM_BACK_LEFT',
-            'CAM_BACK_RIGHT',
-        ]
+        # ORDER MATTERS: MV-FCOS3D voxel pooling indexes cameras by position
+        # (image[i] paired with lidar2cam[i]).  Must match the model config:
+        #   camera_names = [FL, F, FR, BL, B, BR]
+        camera_types = NUSCENES_CAMERA_NAMES
         for cam in camera_types:
             cam_token = sample['data'][cam]
             cam_path, _, cam_intrinsic = nusc.get_sample_data(cam_token)
@@ -451,14 +448,7 @@ def export_2d_annotation(root_path, info_path, version, mono3d=True):
             Default: True.
     """
     # get bbox annotations for camera
-    camera_types = [
-        'CAM_FRONT',
-        'CAM_FRONT_RIGHT',
-        'CAM_FRONT_LEFT',
-        'CAM_BACK',
-        'CAM_BACK_LEFT',
-        'CAM_BACK_RIGHT',
-    ]
+    camera_types = NUSCENES_CAMERA_NAMES
     nusc_infos = mmengine.load(info_path)['infos']
     nusc = NuScenes(version=version, dataroot=root_path, verbose=True)
     # info_2d_list = []
