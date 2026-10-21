@@ -1,5 +1,14 @@
-Welcome to MMDetection3D's documentation!
-==========================================
+DeltaX India Camera-Based 3D Detection
+====================================
+
+This repository is a company-maintained fork of MMDetection3D, not an official
+OpenMMLab release. Start with the `project documentation
+<https://github.com/pothinenisaimadhu-deltax/fcos3d/blob/main/docs/project/index.md>`_
+for supported FCOS3D, PGD and NuScenes MV-FCOS3D workflows, validation evidence
+and publication requirements.
+
+The framework pages below are retained upstream references. Their broader
+model catalog and examples are not a support commitment for this trimmed fork.
 
 .. toctree::
    :maxdepth: 1

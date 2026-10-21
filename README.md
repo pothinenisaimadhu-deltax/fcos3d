@@ -1,418 +1,108 @@
-<div align="center">
-  <img src="resources/mmdet3d-logo.png" width="600"/>
-  <div>&nbsp;</div>
-  <div align="center">
-    <b><font size="5">OpenMMLab website</font></b>
-    <sup>
-      <a href="https://openmmlab.com">
-        <i><font size="4">HOT</font></i>
-      </a>
-    </sup>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <b><font size="5">OpenMMLab platform</font></b>
-    <sup>
-      <a href="https://platform.openmmlab.com">
-        <i><font size="4">TRY IT OUT</font></i>
-      </a>
-    </sup>
-  </div>
-  <div>&nbsp;</div>
+# DeltaX India Camera-Based 3D Detection
 
-[![PyPI](https://img.shields.io/pypi/v/mmdet3d)](https://pypi.org/project/mmdet3d)
-[![docs](https://img.shields.io/badge/docs-latest-blue)](https://mmdetection3d.readthedocs.io/en/latest/)
-[![badge](https://github.com/open-mmlab/mmdetection3d/workflows/build/badge.svg)](https://github.com/open-mmlab/mmdetection3d/actions)
-[![codecov](https://codecov.io/gh/open-mmlab/mmdetection3d/branch/main/graph/badge.svg)](https://codecov.io/gh/open-mmlab/mmdetection3d)
-[![license](https://img.shields.io/github/license/open-mmlab/mmdetection3d.svg)](https://github.com/open-mmlab/mmdetection3d/blob/main/LICENSE)
-[![open issues](https://isitmaintained.com/badge/open/open-mmlab/mmdetection3d.svg)](https://github.com/open-mmlab/mmdetection3d/issues)
-[![issue resolution](https://isitmaintained.com/badge/resolution/open-mmlab/mmdetection3d.svg)](https://github.com/open-mmlab/mmdetection3d/issues)
+A focused research and engineering repository for **FCOS3D, PGD and NuScenes
+MV-FCOS3D**, maintained for DeltaX India. It adapts OpenMMLab MMDetection3D:
+the original algorithms and framework are not claimed as company inventions.
 
-[📘Documentation](https://mmdetection3d.readthedocs.io/en/latest/) |
-[🛠️Installation](https://mmdetection3d.readthedocs.io/en/latest/get_started.html) |
-[👀Model Zoo](https://mmdetection3d.readthedocs.io/en/latest/model_zoo.html) |
-[🆕Update News](https://mmdetection3d.readthedocs.io/en/latest/notes/changelog.html) |
-[🚀Ongoing Projects](https://github.com/open-mmlab/mmdetection3d/projects) |
-[🤔Reporting Issues](https://github.com/open-mmlab/mmdetection3d/issues/new/choose)
+Repository: [pothinenisaimadhu-deltax/fcos3d](https://github.com/pothinenisaimadhu-deltax/fcos3d)
+| [Documentation](docs/project/index.md)
+| [Issues](https://github.com/pothinenisaimadhu-deltax/fcos3d/issues)
+| [License](LICENSE)
 
-</div>
+**Status:** research workflows, not a production perception system. The MV
+path has passed reduced-memory CUDA execution checks. Full-resolution
+convergence, deployment performance and safety validation are not established
+by those checks.
 
-<div align="center">
+## Supported scope
 
-English | [简体中文](README_zh-CN.md)
+| Workflow | Input per model sample | Implementation | Supervision / output |
+| --- | --- | --- | --- |
+| FCOS3D | One image | FCOSMono3D / FCOSMono3DHead | Camera-frame boxes, classes, direction, velocity and configured attributes |
+| PGD, called FCOS3D++ in this fork | One image | FCOSMono3D / PGDHead | Monocular depth-related extensions and configured box outputs |
+| NuScenes MV-FCOS3D | Six cameras at one timestamp | MultiViewDfM / NuScenesVelocityAnchor3DHead | Common LiDAR-frame 9D boxes, classes and direction |
+| Custom JSON mono workflows | One image | FCOS3D or PGD / NuScenesJsonDataset | Prediction export; not automatically official nuScenes scoring |
 
-</div>
+Camera-only means no LiDAR points are supplied to these detectors. Calibration,
+ground-truth boxes and evaluation metadata are still required. `lidar2cam`
+is a transformation matrix, not point-cloud input. This trimmed fork does
+**not** promise the full upstream model/dataset catalog.
 
-<div align="center">
-  <a href="https://openmmlab.medium.com/" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/219255827-67c1a27f-f8c5-46a9-811d-5e57448c61d1.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://discord.com/channels/1037617289144569886/1046608014234370059" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218347213-c080267f-cbb6-443e-8532-8e1ed9a58ea9.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://twitter.com/OpenMMLab" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218346637-d30c8a0f-3eba-4699-8131-512fb06d46db.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://www.youtube.com/openmmlab" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/218346691-ceb2116a-465a-40af-8424-9f30d2348ca9.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://space.bilibili.com/1293512903" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/219026751-d7d14cce-a7c9-4e82-9942-8375fca65b99.png" width="3%" alt="" /></a>
-  <img src="https://user-images.githubusercontent.com/25839884/218346358-56cc8e2f-a2b8-487f-9088-32480cceabcf.png" width="3%" alt="" />
-  <a href="https://www.zhihu.com/people/openmmlab" style="text-decoration:none;">
-    <img src="https://user-images.githubusercontent.com/25839884/219026120-ba71e48b-6e94-4bd4-b4e9-b7d175b5e362.png" width="3%" alt="" /></a>
-</div>
+## Improvements in this fork
 
-## Introduction
+- NuScenes v2 PKL preparation with frame-level and per-camera annotations.
+- Canonical six-camera ordering in conversion and the MV dataset adapter.
+- Dataset/projection validation and explicit custom-scene subset evaluation.
+- Opt-in registration of multi-view model dependencies.
+- A separate 9D anchor head, with velocity priors for training and decoding.
+- PKL-driven Mini/trainval version selection in the MV adapter.
+- Supported-workflow checks at training and evaluation entry points.
+- Focused CUDA, camera-order and velocity-gradient regression tests.
 
-This is a focused FCOS3D repository. Its supported training and evaluation
-workflows are the camera-only **FCOS3D** and **PGD (FCOS3D++)** models on
-nuScenes and custom data converted to the supplied nuScenes JSON schema. The
-upstream MMDetection3D project remains the reference for shared framework
-behavior.
+These are integration and reliability improvements, **not demonstrated
+AP/NDS improvements**. See [validation and reporting](docs/project/validation.md).
 
-The nuScenes and custom-data helpers are retained. The supported model entry
-points validate camera datasets; custom data must first be converted to the
-nuScenes camera/annotation schema.
+## Documentation
 
-The main branch works with **PyTorch 1.8+**.
+| Guide | Purpose |
+| --- | --- |
+| [Documentation home](docs/project/index.md) | Reading order and support boundaries |
+| [Repository handbook](docs/project/repository-handbook.md) | Detailed file structure, models, configuration, and sample commands |
+| [File inventory](docs/project/file-inventory.md) | Complete indexed file list and file responsibilities |
+| [Installation](docs/project/installation.md) | Environments, CUDA operators and import checks |
+| [Data preparation](docs/project/data-preparation.md) | Mini/trainval, PKL schema, ordering and coordinates |
+| [Training](docs/project/training.md) | Commands, batches, LR, fine-tuning and resume |
+| [Evaluation](docs/project/evaluation.md) | Splits, metrics, prediction export and mosaics |
+| [Architecture](docs/project/architecture.md) | Entry points, modules and losses |
+| [Validation](docs/project/validation.md) | Evidence and fair experiment reporting |
+| [Troubleshooting](docs/project/troubleshooting.md) | Failures, geometry and velocity debugging |
+| [Publication checklist](docs/project/publication.md) | Company release, provenance, privacy and licensing |
+| [Contributing](CONTRIBUTING.md) | Review and testing expectations |
 
-![demo image](resources/mmdet3d_outdoor_demo.gif)
+Material under `docs/en/` includes retained upstream guidance. Broad examples
+may refer to removed models. Use the project guides for supported commands.
+Older diagrams and office documents are historical artifacts, not the current
+authoritative workflow.
 
-<details open>
-<summary>Major features</summary>
+## Quick start
 
-- **Support multi-modality/single-modality detectors out of box**
+Run from the repository root in a compatible CUDA environment:
 
-  It directly supports multi-modality/single-modality detectors including MVXNet, VoteNet, PointPillars, etc.
-
-- **Support indoor/outdoor 3D detection out of box**
-
-  It directly supports popular indoor and outdoor 3D detection datasets, including ScanNet, SUNRGB-D, Waymo, nuScenes, Lyft, and KITTI. For nuScenes dataset, we also support [nuImages dataset](https://github.com/open-mmlab/mmdetection3d/tree/main/configs/nuimages).
-
-- **Natural integration with 2D detection**
-
-  All the about **300+ models, methods of 40+ papers**, and modules supported in [MMDetection](https://github.com/open-mmlab/mmdetection/blob/3.x/docs/en/model_zoo.md) can be trained or used in this codebase.
-
-- **High efficiency**
-
-  It trains faster than other codebases. The main results are as below. Details can be found in [benchmark.md](./docs/en/notes/benchmarks.md). We compare the number of samples trained per second (the higher, the better). The models that are not supported by other codebases are marked by `✗`.
-
-  |       Methods       | MMDetection3D | [OpenPCDet](https://github.com/open-mmlab/OpenPCDet) | [votenet](https://github.com/facebookresearch/votenet) | [Det3D](https://github.com/poodarchu/Det3D) |
-  | :-----------------: | :-----------: | :--------------------------------------------------: | :----------------------------------------------------: | :-----------------------------------------: |
-  |       VoteNet       |      358      |                          ✗                           |                           77                           |                      ✗                      |
-  |  PointPillars-car   |      141      |                          ✗                           |                           ✗                            |                     140                     |
-  | PointPillars-3class |      107      |                          44                          |                           ✗                            |                      ✗                      |
-  |       SECOND        |      40       |                          30                          |                           ✗                            |                      ✗                      |
-  |       Part-A2       |      17       |                          14                          |                           ✗                            |                      ✗                      |
-
-</details>
-
-Like [MMDetection](https://github.com/open-mmlab/mmdetection) and [MMCV](https://github.com/open-mmlab/mmcv), MMDetection3D can also be used as a library to support different projects on top of it.
-
-## What's New
-
-### Highlight
-
-In version 1.4, MMDetecion3D refactors the Waymo dataset and accelerates the preprocessing, training/testing setup, and evaluation of Waymo dataset. We also extends the support for camera-based, such as Monocular and BEV, 3D object detection models on Waymo. A detailed description of the Waymo data information is provided [here](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/waymo.html).
-
-Besides, in version 1.4, MMDetection3D provides [Waymo-mini](https://download.openmmlab.com/mmdetection3d/data/waymo_mmdet3d_after_1x4/waymo_mini.tar.gz) to help community users get started with Waymo and use it for quick iterative development.
-
-**v1.4.0** was released in 8/1/2024：
-
-- Support the training of [DSVT](<(https://arxiv.org/abs/2301.06051)>) in `projects`
-- Support [Nerf-Det](https://arxiv.org/abs/2307.14620) in `projects`
-- Refactor Waymo dataset
-
-**v1.3.0** was released in 18/10/2023:
-
-- Support [CENet](https://arxiv.org/abs/2207.12691) in `projects`
-- Enhance demos with new 3D inferencers
-
-**v1.2.0** was released in 4/7/2023
-
-- Support [New Config Type](https://mmengine.readthedocs.io/en/latest/advanced_tutorials/config.html#a-pure-python-style-configuration-file-beta) in `mmdet3d/configs`
-- Support the inference of [DSVT](<(https://arxiv.org/abs/2301.06051)>) in `projects`
-- Support downloading datasets from [OpenDataLab](https://opendatalab.com/) using `mim`
-
-**v1.1.1** was released in 30/5/2023:
-
-- Support [TPVFormer](https://arxiv.org/pdf/2302.07817.pdf) in `projects`
-- Support the training of BEVFusion in `projects`
-- Support lidar-based 3D semantic segmentation benchmark
-
-## Installation
-
-Please refer to [Installation](https://mmdetection3d.readthedocs.io/en/latest/get_started.html) for installation instructions.
-
-## Getting Started
-
-For detailed user guides and advanced guides, please refer to our [documentation](https://mmdetection3d.readthedocs.io/en/latest/):
-
-<details>
-<summary>User Guides</summary>
-
-- [Train & Test](https://mmdetection3d.readthedocs.io/en/latest/user_guides/index.html#train-test)
-  - [Learn about Configs](https://mmdetection3d.readthedocs.io/en/latest/user_guides/config.html)
-  - [Coordinate System](https://mmdetection3d.readthedocs.io/en/latest/user_guides/coord_sys_tutorial.html)
-  - [Dataset Preparation](https://mmdetection3d.readthedocs.io/en/latest/user_guides/dataset_prepare.html)
-  - [Customize Data Pipelines](https://mmdetection3d.readthedocs.io/en/latest/user_guides/data_pipeline.html)
-  - [Test and Train on Standard Datasets](https://mmdetection3d.readthedocs.io/en/latest/user_guides/train_test.html)
-  - [Inference](https://mmdetection3d.readthedocs.io/en/latest/user_guides/inference.html)
-  - [Train with Customized Datasets](https://mmdetection3d.readthedocs.io/en/latest/user_guides/new_data_model.html)
-- [Useful Tools](https://mmdetection3d.readthedocs.io/en/latest/user_guides/index.html#useful-tools)
-
-</details>
-
-<details>
-<summary>Advanced Guides</summary>
-
-- [Datasets](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/index.html#datasets)
-  - [KITTI Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/kitti.html)
-  - [NuScenes Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/nuscenes.html)
-  - [Lyft Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/lyft.html)
-  - [Waymo Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/waymo.html)
-  - [SUN RGB-D Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/sunrgbd.html)
-  - [ScanNet Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/scannet.html)
-  - [S3DIS Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/s3dis.html)
-  - [SemanticKITTI Dataset](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/datasets/semantickitti.html)
-- [Supported Tasks](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/index.html#supported-tasks)
-  - [LiDAR-Based 3D Detection](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/supported_tasks/lidar_det3d.html)
-  - [Vision-Based 3D Detection](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/supported_tasks/vision_det3d.html)
-  - [LiDAR-Based 3D Semantic Segmentation](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/supported_tasks/lidar_sem_seg3d.html)
-- [Customization](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/index.html#customization)
-  - [Customize Datasets](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/customize_dataset.html)
-  - [Customize Models](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/customize_models.html)
-  - [Customize Runtime Settings](https://mmdetection3d.readthedocs.io/en/latest/advanced_guides/customize_runtime.html)
-
-</details>
-
-## Overview of Benchmark and Model Zoo
-
-Results and models are available in the [model zoo](docs/en/model_zoo.md).
-
-<div align="center">
-  <b>Components</b>
-</div>
-<table align="center">
-  <tbody>
-    <tr align="center" valign="bottom">
-      <td>
-        <b>Backbones</b>
-      </td>
-      <td>
-        <b>Heads</b>
-      </td>
-      <td>
-        <b>Features</b>
-      </td>
-    </tr>
-    <tr valign="top">
-      <td>
-      <ul>
-        <li><a href="configs/pointnet2">PointNet (CVPR'2017)</a></li>
-        <li><a href="configs/pointnet2">PointNet++ (NeurIPS'2017)</a></li>
-        <li><a href="configs/regnet">RegNet (CVPR'2020)</a></li>
-        <li><a href="configs/dgcnn">DGCNN (TOG'2019)</a></li>
-        <li>DLA (CVPR'2018)</li>
-        <li>MinkResNet (CVPR'2019)</li>
-        <li><a href="configs/minkunet">MinkUNet (CVPR'2019)</a></li>
-        <li><a href="configs/cylinder3d">Cylinder3D (CVPR'2021)</a></li>
-      </ul>
-      </td>
-      <td>
-      <ul>
-        <li><a href="configs/free_anchor">FreeAnchor (NeurIPS'2019)</a></li>
-      </ul>
-      </td>
-      <td>
-      <ul>
-        <li><a href="configs/dynamic_voxelization">Dynamic Voxelization (CoRL'2019)</a></li>
-      </ul>
-      </td>
-    </tr>
-</td>
-    </tr>
-  </tbody>
-</table>
-
-<div align="center">
-  <b>Architectures</b>
-</div>
-<table align="center">
-  <tbody>
-    <tr align="center" valign="middle">
-      <td>
-        <b>LiDAR-based 3D Object Detection</b>
-      </td>
-      <td>
-        <b>Camera-based 3D Object Detection</b>
-      </td>
-      <td>
-        <b>Multi-modal 3D Object Detection</b>
-      </td>
-      <td>
-        <b>3D Semantic Segmentation</b>
-      </td>
-    </tr>
-    <tr valign="top">
-      <td>
-        <li><b>Outdoor</b></li>
-        <ul>
-            <li><a href="configs/second">SECOND (Sensor'2018)</a></li>
-            <li><a href="configs/pointpillars">PointPillars (CVPR'2019)</a></li>
-            <li><a href="configs/ssn">SSN (ECCV'2020)</a></li>
-            <li><a href="configs/3dssd">3DSSD (CVPR'2020)</a></li>
-            <li><a href="configs/sassd">SA-SSD (CVPR'2020)</a></li>
-            <li><a href="configs/point_rcnn">PointRCNN (CVPR'2019)</a></li>
-            <li><a href="configs/parta2">Part-A2 (TPAMI'2020)</a></li>
-            <li><a href="configs/centerpoint">CenterPoint (CVPR'2021)</a></li>
-            <li><a href="configs/pv_rcnn">PV-RCNN (CVPR'2020)</a></li>
-            <li><a href="projects/CenterFormer">CenterFormer (ECCV'2022)</a></li>
-        </ul>
-        <li><b>Indoor</b></li>
-        <ul>
-            <li><a href="configs/votenet">VoteNet (ICCV'2019)</a></li>
-            <li><a href="configs/h3dnet">H3DNet (ECCV'2020)</a></li>
-            <li><a href="configs/groupfree3d">Group-Free-3D (ICCV'2021)</a></li>
-            <li><a href="configs/fcaf3d">FCAF3D (ECCV'2022)</a></li>
-            <li><a href="projects/TR3D">TR3D (ArXiv'2023)</a></li>
-      </ul>
-      </td>
-      <td>
-        <li><b>Outdoor</b></li>
-        <ul>
-          <li><a href="configs/imvoxelnet">ImVoxelNet (WACV'2022)</a></li>
-          <li><a href="configs/smoke">SMOKE (CVPRW'2020)</a></li>
-          <li><a href="configs/fcos3d">FCOS3D (ICCVW'2021)</a></li>
-          <li><a href="configs/pgd">PGD (CoRL'2021)</a></li>
-          <li><a href="configs/monoflex">MonoFlex (CVPR'2021)</a></li>
-          <li><a href="projects/DETR3D">DETR3D (CoRL'2021)</a></li>
-          <li><a href="projects/PETR">PETR (ECCV'2022)</a></li>
-        </ul>
-        <li><b>Indoor</b></li>
-        <ul>
-          <li><a href="configs/imvoxelnet">ImVoxelNet (WACV'2022)</a></li>
-        </ul>
-      </td>
-      <td>
-        <li><b>Outdoor</b></li>
-        <ul>
-          <li><a href="configs/mvxnet">MVXNet (ICRA'2019)</a></li>
-          <li><a href="projects/BEVFusion">BEVFusion (ICRA'2023)</a></li>
-        </ul>
-        <li><b>Indoor</b></li>
-        <ul>
-          <li><a href="configs/imvotenet">ImVoteNet (CVPR'2020)</a></li>
-        </ul>
-      </td>
-      <td>
-        <li><b>Outdoor</b></li>
-        <ul>
-          <li><a href="configs/minkunet">MinkUNet (CVPR'2019)</a></li>
-          <li><a href="configs/spvcnn">SPVCNN (ECCV'2020)</a></li>
-          <li><a href="configs/cylinder3d">Cylinder3D (CVPR'2021)</a></li>
-          <li><a href="projects/TPVFormer">TPVFormer (CVPR'2023)</a></li>
-        </ul>
-        <li><b>Indoor</b></li>
-        <ul>
-          <li><a href="configs/pointnet2">PointNet++ (NeurIPS'2017)</a></li>
-          <li><a href="configs/paconv">PAConv (CVPR'2021)</a></li>
-          <li><a href="configs/dgcnn">DGCNN (TOG'2019)</a></li>
-        </ul>
-      </ul>
-      </td>
-    </tr>
-</td>
-    </tr>
-  </tbody>
-</table>
-
-|               | ResNet | VoVNet | Swin-T | PointNet++ | SECOND | DGCNN | RegNetX | DLA | MinkResNet | Cylinder3D | MinkUNet |
-| :-----------: | :----: | :----: | :----: | :--------: | :----: | :---: | :-----: | :-: | :--------: | :--------: | :------: |
-|    SECOND     |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-| PointPillars  |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✓    |  ✗  |     ✗      |     ✗      |    ✗     |
-|  FreeAnchor   |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✓    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    VoteNet    |   ✗    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    H3DNet     |   ✗    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|     3DSSD     |   ✗    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    Part-A2    |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    MVXNet     |   ✓    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|  CenterPoint  |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|      SSN      |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✓    |  ✗  |     ✗      |     ✗      |    ✗     |
-|   ImVoteNet   |   ✓    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    FCOS3D     |   ✓    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|  PointNet++   |   ✗    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-| Group-Free-3D |   ✗    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|  ImVoxelNet   |   ✓    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    PAConv     |   ✗    |   ✗    |   ✗    |     ✓      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|     DGCNN     |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✓   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|     SMOKE     |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✓  |     ✗      |     ✗      |    ✗     |
-|      PGD      |   ✓    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|   MonoFlex    |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✓  |     ✗      |     ✗      |    ✗     |
-|    SA-SSD     |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|    FCAF3D     |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✓      |     ✗      |    ✗     |
-|    PV-RCNN    |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|  Cylinder3D   |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✓      |    ✗     |
-|   MinkUNet    |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✓     |
-|    SPVCNN     |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✓     |
-|   BEVFusion   |   ✗    |   ✗    |   ✓    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-| CenterFormer  |   ✗    |   ✗    |   ✗    |     ✗      |   ✓    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|     TR3D      |   ✗    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✓      |     ✗      |    ✗     |
-|    DETR3D     |   ✓    |   ✓    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|     PETR      |   ✗    |   ✓    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-|   TPVFormer   |   ✓    |   ✗    |   ✗    |     ✗      |   ✗    |   ✗   |    ✗    |  ✗  |     ✗      |     ✗      |    ✗     |
-
-**Note:** All the about **500+ models, methods of 90+ papers** in 2D detection supported by [MMDetection](https://github.com/open-mmlab/mmdetection/blob/3.x/docs/en/model_zoo.md) can be trained or used in this codebase.
-
-## FAQ
-
-Please refer to [FAQ](docs/en/notes/faq.md) for frequently asked questions.
-
-## Contributing
-
-We appreciate all contributions to improve MMDetection3D. Please refer to [CONTRIBUTING.md](docs/en/notes/contribution_guides.md) for the contributing guideline.
-
-## Acknowledgement
-
-MMDetection3D is an open source project that is contributed by researchers and engineers from various colleges and companies. We appreciate all the contributors as well as users who give valuable feedbacks. We wish that the toolbox and benchmark could serve the growing research community by providing a flexible toolkit to reimplement existing methods and develop their own new 3D detectors.
-
-## Citation
-
-If you find this project useful in your research, please consider cite:
-
-```latex
-@misc{mmdet3d2020,
-    title={{MMDetection3D: OpenMMLab} next-generation platform for general {3D} object detection},
-    author={MMDetection3D Contributors},
-    howpublished = {\url{https://github.com/open-mmlab/mmdetection3d}},
-    year={2020}
-}
+```bash
+python -m tools.create_data nuscenes --root-path data/nuscenes --out-dir data/nuscenes_infos --extra-tag nuscenes --version v1.0-mini
+python tools/check_mvfcos3d.py --data-root data/nuscenes --train-ann "$(pwd)/data/nuscenes_infos/nuscenes_infos_train.pkl" --val-ann "$(pwd)/data/nuscenes_infos/nuscenes_infos_val.pkl" --small
 ```
 
-## License
+The second command checks one training/backward pass, prediction and subset
+evaluation without saving a checkpoint. It reduces image/grid size for
+verification; its metrics do not measure trained-model accuracy.
 
-This project is released under the [Apache 2.0 license](LICENSE).
+Use the [complete training command](docs/project/training.md) for a full run.
+Some inherited mono configs contain machine-specific defaults; override all
+dataset and evaluator paths. Start MV training with batch size 1.
 
-## Projects in OpenMMLab
+## Reproducibility and responsible use
 
-- [MMEngine](https://github.com/open-mmlab/mmengine): OpenMMLab foundational library for training deep learning models.
-- [MMCV](https://github.com/open-mmlab/mmcv): OpenMMLab foundational library for computer vision.
-- [MMEval](https://github.com/open-mmlab/mmeval): A unified evaluation library for multiple machine learning libraries.
-- [MIM](https://github.com/open-mmlab/mim): MIM installs OpenMMLab packages.
-- [MMPreTrain](https://github.com/open-mmlab/mmpretrain): OpenMMLab pre-training toolbox and benchmark.
-- [MMDetection](https://github.com/open-mmlab/mmdetection): OpenMMLab detection toolbox and benchmark.
-- [MMDetection3D](https://github.com/open-mmlab/mmdetection3d): OpenMMLab's next-generation platform for general 3D object detection.
-- [MMRotate](https://github.com/open-mmlab/mmrotate): OpenMMLab rotated object detection toolbox and benchmark.
-- [MMYOLO](https://github.com/open-mmlab/mmyolo): OpenMMLab YOLO series toolbox and benchmark.
-- [MMSegmentation](https://github.com/open-mmlab/mmsegmentation): OpenMMLab semantic segmentation toolbox and benchmark.
-- [MMOCR](https://github.com/open-mmlab/mmocr): OpenMMLab text detection, recognition, and understanding toolbox.
-- [MMPose](https://github.com/open-mmlab/mmpose): OpenMMLab pose estimation toolbox and benchmark.
-- [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab 3D human parametric model toolbox and benchmark.
-- [MMSelfSup](https://github.com/open-mmlab/mmselfsup): OpenMMLab self-supervised learning toolbox and benchmark.
-- [MMRazor](https://github.com/open-mmlab/mmrazor): OpenMMLab model compression toolbox and benchmark.
-- [MMFewShot](https://github.com/open-mmlab/mmfewshot): OpenMMLab fewshot learning toolbox and benchmark.
-- [MMAction2](https://github.com/open-mmlab/mmaction2): OpenMMLab's next-generation action understanding toolbox and benchmark.
-- [MMTracking](https://github.com/open-mmlab/mmtracking): OpenMMLab video perception toolbox and benchmark.
-- [MMFlow](https://github.com/open-mmlab/mmflow): OpenMMLab optical flow toolbox and benchmark.
-- [MMagic](https://github.com/open-mmlab/mmagic): Open**MM**Lab **A**dvanced, **G**enerative and **I**ntelligent **C**reation toolbox.
-- [MMGeneration](https://github.com/open-mmlab/mmgeneration): OpenMMLab image and video generative models toolbox.
-- [MMDeploy](https://github.com/open-mmlab/mmdeploy): OpenMMLab model deployment framework.
+Record the commit, resolved config, dependencies, dataset version/split,
+checkpoint origin and checkpoint selection rule. Car-only, custom-subset and
+official ten-class scores are not directly interchangeable. Lower training
+loss alone does not prove better detection.
+
+Do not deploy this repository directly in a safety-critical vehicle system.
+Independent validation, uncertainty analysis and operational testing remain
+required. General questions and reproducible bugs belong in
+[this fork's issues](https://github.com/pothinenisaimadhu-deltax/fcos3d/issues),
+not upstream's issue tracker unless an upstream defect is confirmed.
+
+## Attribution and license
+
+This fork derives from [MMDetection3D](https://github.com/open-mmlab/mmdetection3d).
+Original copyright headers and the [Apache-2.0 license](LICENSE) are retained.
+It is not an official OpenMMLab release and does not imply upstream endorsement.
+
+See the [upstream installation guide](https://mmdetection3d.readthedocs.io/en/latest/get_started.html)
+for framework setup and the
+[nuScenes detection specification](https://github.com/nutonomy/nuscenes-devkit/blob/master/python-sdk/nuscenes/eval/detection/README.md)
+for benchmark definitions. Dataset, checkpoint and third-party asset terms are
+separate from the source-code license. Keep [the upstream citation](CITATION.cff)
+when using the inherited framework.

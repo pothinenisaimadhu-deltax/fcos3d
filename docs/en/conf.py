@@ -21,9 +21,9 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'MMDetection3D'
+project = 'DeltaX India Camera-Based 3D Detection'
 copyright = '2020-2023, OpenMMLab'
-author = 'MMDetection3D Authors'
+author = 'DeltaX India fork maintainers and MMDetection3D Authors'
 
 # The full version, including alpha/beta/rc tags
 version_file = '../../mmdet3d/version.py'
@@ -91,7 +91,7 @@ html_theme_options = {
     'menu': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/open-mmlab/mmdetection3d'
+            'url': 'https://github.com/pothinenisaimadhu-deltax/fcos3d'
         },
         {
             'name':
